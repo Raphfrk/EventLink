@@ -19,13 +19,13 @@ public class MyPropertiesFile {
 
 	String prefix = "";
 
-	MyPropertiesFile(String filename) {
+	public MyPropertiesFile(String filename) {
 
 		tableName = new String(filename);
 
 	}
 
-	MyPropertiesFile(String prefix, String filename) {
+	public MyPropertiesFile(String prefix, String filename) {
 
 		this.prefix = new String(prefix);
 
@@ -33,11 +33,11 @@ public class MyPropertiesFile {
 
 	}
 	
-	boolean containsKey(String name) {
+	public boolean containsKey(String name) {
 		return databaseTable.containsKey(name);
 	}
 
-	void load() {
+	public void load() {
 
 		String[] lines = MiscUtils.fileToString(prefix + tableName);
 
@@ -64,7 +64,7 @@ public class MyPropertiesFile {
 
 	}
 
-	void save() {
+	public void save() {
 
 		ArrayList<String> strings = new ArrayList<String>();
 
@@ -78,7 +78,7 @@ public class MyPropertiesFile {
 
 	}
 
-	void unLoadTable() {
+	public void unLoadTable() {
 
 		synchronized(syncObject) {
 			if(!propertiesDatabase.containsKey(tableName)) {
@@ -88,7 +88,7 @@ public class MyPropertiesFile {
 
 	}
 
-	void addTable() {
+	public void addTable() {
 
 		synchronized(syncObject) {
 			if(!propertiesDatabase.containsKey(tableName)) {
@@ -99,44 +99,44 @@ public class MyPropertiesFile {
 
 	}
 
-	void addRecord(String name, String value) {
+	public void addRecord(String name, String value) {
 		synchronized(syncObject) {
 			databaseTable.put(name, value);		
 		}
 	}
 	
-	int getInt( String name ) {
+	public int getInt( String name ) {
 		synchronized(syncObject) {
 			return Integer.parseInt(databaseTable.get(name));	
 		}
 	}
 
-	long getLong( String name ) {
+	public long getLong( String name ) {
 		synchronized(syncObject) {
 			return Long.parseLong(databaseTable.get(name));		
 		}
 	}
 
-	Boolean getBoolean( String name ) {
+	public Boolean getBoolean( String name ) {
 		synchronized(syncObject) {
 			return Boolean.parseBoolean(databaseTable.get(name));	
 		}
 	}
 
-	Double getDouble( String name ) {
+	public Double getDouble( String name ) {
 		synchronized(syncObject) {
 			return Double.parseDouble(databaseTable.get(name));	
 		}
 	}
 
-	String getString( String name ) {
+	public String getString( String name ) {
 		synchronized(syncObject) {
 			return new String(databaseTable.get(name));		
 		}
 	}
 
 
-	int getInt( String name , int defaultValue ) {
+	public int getInt( String name , int defaultValue ) {
 		synchronized(syncObject) {
 			if( !databaseTable.containsKey(name)) {
 				addRecord(name,Integer.toString(defaultValue));
@@ -145,7 +145,7 @@ public class MyPropertiesFile {
 		}
 	}
 
-	long getLong( String name , long defaultValue ) {
+	public long getLong( String name , long defaultValue ) {
 		synchronized(syncObject) {
 			if( !databaseTable.containsKey(name)) {
 				addRecord(name,Long.toString(defaultValue));
@@ -154,7 +154,7 @@ public class MyPropertiesFile {
 		}
 	}
 
-	Boolean getBoolean( String name , boolean defaultValue ) {
+	public Boolean getBoolean( String name , boolean defaultValue ) {
 		synchronized(syncObject) {
 			if( !databaseTable.containsKey(name)) {
 				addRecord(name,Boolean.toString(defaultValue));
@@ -163,7 +163,7 @@ public class MyPropertiesFile {
 		}
 	}
 
-	Double getDouble( String name , double defaultValue ) {
+	public Double getDouble( String name , double defaultValue ) {
 		synchronized(syncObject) {
 			if( !databaseTable.containsKey(name)) {
 				addRecord(name,Double.toString(defaultValue));
@@ -172,7 +172,7 @@ public class MyPropertiesFile {
 		}
 	}
 
-	String getString( String name , String defaultValue ) {
+	public String getString( String name , String defaultValue ) {
 		synchronized(syncObject) {
 			if( !databaseTable.containsKey(name)) {
 				addRecord(name,new String(defaultValue));
@@ -181,23 +181,23 @@ public class MyPropertiesFile {
 		}
 	}
 
-	void setInt( String name, int value) {
+	public void setInt( String name, int value) {
 		addRecord( name, Integer.toString(value));
 	}
 
-	void setLong( String name, long value) {
+	public void setLong( String name, long value) {
 		addRecord( name, Long.toString(value));
 	}
 	
-	void setDouble( String name, double value) {
+	public void setDouble( String name, double value) {
 		addRecord( name, Double.toString(value));
 	}
 	
-	void setBoolean( String name, boolean value) {
+	public void setBoolean( String name, boolean value) {
 		addRecord( name, Boolean.toString(value));
 	}
 	
-	void setString( String name, String value) {
+	public void setString( String name, String value) {
 		addRecord( name, new String(value));
 	}
 }

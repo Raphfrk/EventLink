@@ -62,7 +62,7 @@ public class SSLUtils {
 		if (Security.getProvider(providerName) == null) {
 			Security.addProvider(new BouncyCastleProvider());
 			if (Security.getProvider(providerName) == null) {
-				MiscUtils.log( "Crypt libray (" + providerName + ") provider not installed");
+				EventLink.logger.log( "Crypt libray (" + providerName + ") provider not installed");
 				return false;
 			}
 		}
@@ -88,7 +88,7 @@ public class SSLUtils {
 
 			cert = certGen.generate(keyPair.getPrivate(), "BC");
 		} catch ( IllegalArgumentException iae ) {
-			MiscUtils.log("Unable to find provider (BC)");
+			EventLink.logger.log("Unable to find provider (BC)");
 			iae.printStackTrace();
 			if( certGen != null ) {
 				Iterator itr = certGen.getSignatureAlgNames();
@@ -98,11 +98,11 @@ public class SSLUtils {
 			}
 			return false;
 		} catch( NoSuchProviderException nspe ) {
-			MiscUtils.log("Unable to find provider (BC)");
+			EventLink.logger.log("Unable to find provider (BC)");
 			nspe.printStackTrace();
 			return false;
 		} catch (NoSuchAlgorithmException nsa ) {
-			MiscUtils.log("Unable to implement algorithm (" + certificateAlgorithm + ")");
+			EventLink.logger.log("Unable to implement algorithm (" + certificateAlgorithm + ")");
 			if( certGen != null ) {
 				Iterator<String> itr = certGen.getSignatureAlgNames();
 				while( itr.hasNext() ) {
@@ -113,15 +113,15 @@ public class SSLUtils {
 			nsa.printStackTrace();
 			return false;
 		} catch (InvalidKeyException ike) {
-			MiscUtils.log("Unable to generate key");
+			EventLink.logger.log("Unable to generate key");
 			ike.printStackTrace();
 			return false;
 		} catch (SignatureException se) {
-			MiscUtils.log("Signature error");
+			EventLink.logger.log("Signature error");
 			se.printStackTrace();
 			return false;
 		} catch (CertificateEncodingException cee ) {
-			MiscUtils.log("Encoding error");
+			EventLink.logger.log("Encoding error");
 			cee.printStackTrace();
 			return false;
 		}
@@ -141,7 +141,7 @@ public class SSLUtils {
 			ks = KeyStore.getInstance("JKS");
 			ks.load(null, passwordArray);
 		} catch (KeyStoreException e) {
-			MiscUtils.log("Keystore creation error");
+			EventLink.logger.log("Keystore creation error");
 			e.printStackTrace();
 			return false;
 		} catch (NoSuchAlgorithmException e) {
@@ -164,7 +164,7 @@ public class SSLUtils {
 			try {
 				ks.setKeyEntry("privateKeyAlias", keyPair.getPrivate(), passwordArray, certs);
 			} catch (KeyStoreException e) {
-				MiscUtils.log("Failed to add keys to store");
+				EventLink.logger.log("Failed to add keys to store");
 				e.printStackTrace();
 				return false;
 			}
@@ -223,7 +223,7 @@ public class SSLUtils {
 				fis = new FileInputStream(file);
 				ks.load(fis, passwordArray);
 			} catch (KeyStoreException e) {
-				MiscUtils.log("Keystore creation error");
+				EventLink.logger.log("Keystore creation error");
 				e.printStackTrace();
 				return null;
 			} catch (NoSuchAlgorithmException e) {
@@ -278,7 +278,7 @@ public class SSLUtils {
 				return null;
 			}
 		} catch (KeyStoreException e) {
-			MiscUtils.log("Unable to read alias list");
+			EventLink.logger.log("Unable to read alias list");
 			return null;
 		}
 
@@ -301,10 +301,10 @@ public class SSLUtils {
 			try {
 				privateKey = (PrivateKey)ks.getKey("privateKeyAlias", passwordArray);
 			} catch (UnrecoverableKeyException e) {
-				MiscUtils.log("Unable to read keys from keystore");
+				EventLink.logger.log("Unable to read keys from keystore");
 				return null;
 			} catch (NoSuchAlgorithmException e) {
-				MiscUtils.log("Unable to read keys from keystore (unknown algorithm)");
+				EventLink.logger.log("Unable to read keys from keystore (unknown algorithm)");
 				e.printStackTrace();
 				return null;
 			}
@@ -316,7 +316,7 @@ public class SSLUtils {
 			return privateKey;
 
 		} catch (KeyStoreException e) {
-			MiscUtils.log("Unable to read alias list");
+			EventLink.logger.log("Unable to read alias list");
 			return null;
 		}
 
@@ -373,7 +373,7 @@ public class SSLUtils {
 			try {
 				ks.deleteEntry(alias);
 			} catch (KeyStoreException e) {
-				MiscUtils.log("Failed to remove " + alias + " from store");
+				EventLink.logger.log("Failed to remove " + alias + " from store");
 				e.printStackTrace();
 				return "Error removing key from store";
 			}
@@ -399,7 +399,7 @@ public class SSLUtils {
 
 			try {
 				if( ks.getCertificate(alias) != null ) {
-					MiscUtils.log("Certificate already exists for: " + alias );
+					EventLink.logger.log("Certificate already exists for: " + alias );
 					return false;
 				}
 			} catch (KeyStoreException kse) {
@@ -411,7 +411,7 @@ public class SSLUtils {
 			try {
 				ks.setCertificateEntry(alias, cert);
 			} catch (KeyStoreException e) {
-				MiscUtils.log("Failed to add cert to store");
+				EventLink.logger.log("Failed to add cert to store");
 				e.printStackTrace();
 				return false;
 			}
@@ -431,7 +431,7 @@ public class SSLUtils {
 
 		synchronized(fileLock) {
 			try {
-				MiscUtils.log("Writing new cert to store: " + file);
+				EventLink.logger.log("Writing new cert to store: " + file);
 				out = new FileOutputStream(file);
 				ks.store(out, passwordArray);
 			} catch (KeyStoreException e) {
@@ -480,7 +480,7 @@ public class SSLUtils {
 				ks = KeyStore.getInstance("JKS");
 				ks.load(fis = new FileInputStream(file), passwordArray);
 			} catch (KeyStoreException e) {
-				MiscUtils.log("Keystore creation error");
+				EventLink.logger.log("Keystore creation error");
 				e.printStackTrace();
 				return null;
 			} catch (NoSuchAlgorithmException e) {

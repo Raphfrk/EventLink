@@ -73,12 +73,19 @@ public class ConnectionManager {
 		return sendPacket(eventLinkPacket);
 
 	}
-	
+
 	boolean sendPacket(EventLinkPacket eventLinkPacket) {
 
 		String target = eventLinkPacket.destinationServer;
-		
+
 		String nextHop = p.routingTableManager.getNextHop("servers", target);
+
+		if(target.equals(p.serverName)) {
+			if( (eventLinkPacket.timeToLive--) >= 0) {
+				processPacket(eventLinkPacket);
+			}
+			return true;
+		}
 
 		synchronized(activeConnections) {
 			if(getEnd()) {
@@ -361,16 +368,7 @@ public class ConnectionManager {
 				}
 				while(eventLinkPacket!=null) {
 
-					Object payload = eventLinkPacket.payload;
-					if(!eventLinkPacket.destinationServer.equals(p.serverName)) {
-						sendPacket(eventLinkPacket);
-					} else if(payload instanceof Ping) {
-						processEvent(eventLinkPacket, (Ping)eventLinkPacket.payload);
-					} else if(payload instanceof RoutingTable) {
-						processEvent(eventLinkPacket, (RoutingTable)eventLinkPacket.payload);
-					} else if(payload instanceof Event) {
-						processEvent(eventLinkPacket, (Event)eventLinkPacket.payload);
-					}
+					processPacket(eventLinkPacket);
 
 					if(!eventLinkPackets.isEmpty()) {
 						eventLinkPacket = eventLinkPackets.removeFirst();
@@ -402,6 +400,19 @@ public class ConnectionManager {
 				alive = false;
 			}
 
+		}
+	}
+
+	void processPacket(EventLinkPacket eventLinkPacket) {
+		Object payload = eventLinkPacket.payload;
+		if(!eventLinkPacket.destinationServer.equals(p.serverName)) {
+			sendPacket(eventLinkPacket);
+		} else if(payload instanceof Ping) {
+			processEvent(eventLinkPacket, (Ping)eventLinkPacket.payload);
+		} else if(payload instanceof RoutingTable) {
+			processEvent(eventLinkPacket, (RoutingTable)eventLinkPacket.payload);
+		} else if(payload instanceof Event) {
+			processEvent(eventLinkPacket, (Event)eventLinkPacket.payload);
 		}
 	}
 

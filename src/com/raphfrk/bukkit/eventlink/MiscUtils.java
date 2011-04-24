@@ -17,29 +17,55 @@ import org.bukkit.plugin.Plugin;
 
 
 public class MiscUtils {
-
-	static final private Object logSync = new Object();
-	static private Logger log = Logger.getLogger("Minecraft");
-	static private String logPrefix = "";
-
-	static void setLogger(Logger log, String prefix) {
-		synchronized(logSync) {
-			MiscUtils.log = log;
-			MiscUtils.logPrefix = prefix;
+	
+	public static LogInstance getLogger(String prefix) {
+		return new LogInstance(prefix);
+	}
+	
+	public static LogInstance defaultLog = new LogInstance();
+	
+	public static class LogInstance {
+		
+		public LogInstance() {
+			this.log = Logger.getLogger("Minecraft");
+			this.logPrefix = "[EventLink-Default Log]";
 		}
+		
+		public LogInstance(String prefix) {
+			this.log = Logger.getLogger("Minecraft");
+			this.logPrefix = prefix;
+		}
+		
+		public LogInstance(Logger log, String prefix) {
+			this.log = log;
+			this.logPrefix = prefix;
+		}
+		
+		final private Object logSync = new Object();
+		
+		private Logger log = Logger.getLogger("Minecraft");
+		private String logPrefix = "";
+		
+		public void setLogPrefix(Logger log, String prefix) {
+			synchronized(logSync) {
+				this.log = log;
+				this.logPrefix = prefix;
+			}
+		}
+		
+		public void log( String message ) {
+			synchronized(logSync) {
+				log.info( logPrefix + " " + message);
+			}
+		}
+		
 	}
 
-	static void log( String message ) {
-		synchronized(logSync) {
-			log.info( logPrefix + " " + message);
-		}
-	}
-
-	static void sendAsyncMessage(Plugin plugin, Server server, CommandSender commandSender, String message) {
+	public static void sendAsyncMessage(Plugin plugin, Server server, CommandSender commandSender, String message) {
 		sendAsyncMessage(plugin, server, commandSender, message, 0);
 	}
 
-	static void sendAsyncMessage(Plugin plugin, Server server, CommandSender commandSender, String message, long delay) {
+	public static void sendAsyncMessage(Plugin plugin, Server server, CommandSender commandSender, String message, long delay) {
 		if( commandSender == null ) return;
 
 		final CommandSender finalCommandSender = commandSender;
@@ -52,7 +78,7 @@ public class MiscUtils {
 		}, delay);
 	}
 
-	static void stringToFile( ArrayList<String> string , String filename ) {
+	public static void stringToFile( ArrayList<String> string , String filename ) {
 
 		File portalFile = new File( filename );
 
@@ -61,10 +87,10 @@ public class MiscUtils {
 		try {
 			bw = new BufferedWriter(new FileWriter(portalFile));
 		} catch (FileNotFoundException fnfe ) {
-			log.info("[Serverport] Unable to write to file: " + filename );
+			defaultLog.log("Unable to write to file: " + filename );
 			return;
 		} catch (IOException ioe) {
-			log.info("Serverport] Unable to write to file: " + filename );
+			defaultLog.log("Unable to write to file: " + filename );
 			return;
 		}
 
@@ -75,13 +101,13 @@ public class MiscUtils {
 			}
 			bw.close();
 		} catch (IOException ioe) {
-			log.info("[Serverport] Unable to write to file: " + filename );
+			defaultLog.log("Unable to write to file: " + filename );
 			return;
 		}
 
 	}
 
-	static String[] fileToString( String filename ) {
+	public static String[] fileToString( String filename ) {
 
 		File portalFile = new File( filename );
 
@@ -90,7 +116,7 @@ public class MiscUtils {
 		try {
 			br = new BufferedReader(new FileReader(portalFile));
 		} catch (FileNotFoundException fnfe ) {
-			log.info("[Serverport] Unable to open file: " + filename );
+			defaultLog.log("[Serverport] Unable to open file: " + filename );
 			return null;
 		} 
 
@@ -106,14 +132,14 @@ public class MiscUtils {
 			}
 			br.close();
 		} catch (IOException ioe) {
-			log.info("[Serverport] Error reading file: " + filename );
+			defaultLog.log("Error reading file: " + filename );
 			return null;
 		}
 
 		return( sb.toString().split("\n") );
 	}
 
-	static boolean checkText( String text ) {
+	public static boolean checkText( String text ) {
 
 		if( text.length() > 15 ) {
 			return false;

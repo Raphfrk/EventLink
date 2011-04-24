@@ -34,7 +34,9 @@ public class EventLink extends JavaPlugin {
 	HashSet<String> admins = new HashSet<String>();
 
 	File pluginDirectory;
-
+	
+	static MiscUtils.LogInstance logger = MiscUtils.getLogger("[EventLink]");
+	
 	EventLinkServer eventLinkServer = null;
 
 	boolean nameUpdated = false;
@@ -59,7 +61,7 @@ public class EventLink extends JavaPlugin {
 		pm = getServer().getPluginManager();
 		server = getServer();
 
-		MiscUtils.setLogger(getServer().getLogger(), "[EventLink]");
+		logger.setLogPrefix(getServer().getLogger(), "[EventLink]");
 
 		log(name + " initialized");
 
@@ -207,7 +209,7 @@ public class EventLink extends JavaPlugin {
 
 	}
 
-	private boolean isAdmin(Player player) {
+	public boolean isAdmin(Player player) {
 		return player.isOp() || admins.contains(player.getName().toLowerCase());
 	}
 
@@ -336,7 +338,7 @@ public class EventLink extends JavaPlugin {
 	}
 
 	public void log(String message) {
-		MiscUtils.log(message);
+		logger.log(message);
 	}
 
 	public boolean sendEvent(String target, Event event) {

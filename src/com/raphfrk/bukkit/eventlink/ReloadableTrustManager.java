@@ -68,7 +68,7 @@ class ReloadableTrustManager implements X509TrustManager  {
 					ks.load(in, passwordArray);
 
 				} catch (KeyStoreException e) {
-					MiscUtils.log("Keystore creation error");
+					MiscUtils.defaultLog.log("Keystore creation error");
 					e.printStackTrace();
 					return false;
 				} catch (NoSuchAlgorithmException e) {
@@ -93,7 +93,7 @@ class ReloadableTrustManager implements X509TrustManager  {
 			try {
 				trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
 			} catch (NoSuchAlgorithmException e1) {
-				MiscUtils.log("trust store no such algorithm error on reload");
+				MiscUtils.defaultLog.log("trust store no such algorithm error on reload");
 				e1.printStackTrace();
 				return false;
 			}
@@ -101,7 +101,7 @@ class ReloadableTrustManager implements X509TrustManager  {
 			try {
 				trustManagerFactory.init(ks);
 			} catch (KeyStoreException e) {
-				MiscUtils.log("trust store init error on reload");
+				MiscUtils.defaultLog.log("trust store init error on reload");
 				e.printStackTrace();
 				return false;
 			}
