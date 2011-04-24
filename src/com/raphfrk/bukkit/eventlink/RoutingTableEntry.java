@@ -8,11 +8,17 @@ public class RoutingTableEntry implements Serializable {
 	private String nextServer;
 	private String location;
 	private int hops;
+	
+	@Override
+	public String toString() {
+		return "Hops: " + hops + " next: " + nextServer + " location: " + location;
+	}
 
 	public void setNextServer(String nextServer) {
 		this.nextServer = nextServer;
 	}
 	
+	@Override
 	public RoutingTableEntry clone() {
 		RoutingTableEntry te = new RoutingTableEntry();
 		te.hops = hops;

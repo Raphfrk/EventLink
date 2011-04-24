@@ -8,21 +8,19 @@ import javax.net.ssl.X509TrustManager;
 
 public class TrustingTrustManager implements X509TrustManager {
 
-	@Override
 	public void checkClientTrusted(
-			X509Certificate[] arg0, String arg1)
-	throws CertificateException {								
-	}
-
-	@Override
-	public void checkServerTrusted(
-			X509Certificate[] arg0, String arg1)
+			X509Certificate[] paramArrayOfX509Certificate, String paramString)
 	throws CertificateException {
-
 	}
 
-	@Override
+	public void checkServerTrusted(
+			X509Certificate[] paramArrayOfX509Certificate, String paramString)
+	throws CertificateException {
+	}
+
 	public X509Certificate[] getAcceptedIssuers() {
 		return null;
 	}
+
+
 }

@@ -70,6 +70,16 @@ public class ConnectionManager {
 
 		EventLinkPacket eventLinkPacket = new EventLinkPacket(serverName, target, payload);
 
+		return sendPacket(eventLinkPacket);
+
+	}
+	
+	boolean sendPacket(EventLinkPacket eventLinkPacket) {
+
+		String target = eventLinkPacket.destinationServer;
+		
+		String nextHop = p.routingTableManager.getNextHop("servers", target);
+
 		synchronized(activeConnections) {
 			if(getEnd()) {
 				p.log("Attempting to send object while connection manager is stopping");
@@ -79,11 +89,15 @@ public class ConnectionManager {
 				Connection targetConnection = activeConnections.get(target);
 				targetConnection.send(eventLinkPacket);
 				return true;
-			} else {
-				return false;
+			} else if(activeConnections.containsKey(nextHop)) {
+				Connection targetConnection = activeConnections.get(nextHop);
+				if( (eventLinkPacket.timeToLive--) >= 0) {
+					targetConnection.send(eventLinkPacket);
+				}
+				return true;
 			}
-
 		}
+		return false;
 
 	}
 
@@ -172,7 +186,7 @@ public class ConnectionManager {
 		}
 
 		p.log("Connection successfully established with " + serverName );
-		
+
 		p.routingTableManager.sendAllTablesTo(serverName);
 
 		return true;
@@ -343,32 +357,23 @@ public class ConnectionManager {
 
 				EventLinkPacket eventLinkPacket = null;
 				if(!eventLinkPackets.isEmpty()) {
-					eventLinkPacket = eventLinkPackets.pop();
+					eventLinkPacket = eventLinkPackets.removeFirst();
 				}
 				while(eventLinkPacket!=null) {
-					
-					if(eventLinkPacket.payload instanceof Event) {
-						
-						final Event finalEvent = (Event)eventLinkPacket.payload;
-						
-						p.getServer().getScheduler().scheduleSyncDelayedTask(p, new Runnable() {
 
-							public void run() {
-								p.getServer().getPluginManager().callEvent(finalEvent);
-							}
-
-						});
-
-					} else if(eventLinkPacket.payload instanceof Ping) {
-						Ping ping = (Ping)eventLinkPacket.payload;
-						sendObject(eventLinkPacket.sourceServer, new EventLinkMessageEvent(ping.sourcePlayer, "Reply received from " + serverName));
-					} else if(eventLinkPacket.payload instanceof RoutingTable) {
-						RoutingTable rt = (RoutingTable)eventLinkPacket.payload;
-						p.routingTableManager.combineTable(eventLinkPacket.sourceServer, rt);
+					Object payload = eventLinkPacket.payload;
+					if(!eventLinkPacket.destinationServer.equals(p.serverName)) {
+						sendPacket(eventLinkPacket);
+					} else if(payload instanceof Ping) {
+						processEvent(eventLinkPacket, (Ping)eventLinkPacket.payload);
+					} else if(payload instanceof RoutingTable) {
+						processEvent(eventLinkPacket, (RoutingTable)eventLinkPacket.payload);
+					} else if(payload instanceof Event) {
+						processEvent(eventLinkPacket, (Event)eventLinkPacket.payload);
 					}
 
 					if(!eventLinkPackets.isEmpty()) {
-						eventLinkPacket = eventLinkPackets.pop();
+						eventLinkPacket = eventLinkPackets.removeFirst();
 					} else {
 						eventLinkPacket = null;
 					}
@@ -399,4 +404,23 @@ public class ConnectionManager {
 
 		}
 	}
+
+	void processEvent(EventLinkPacket eventLinkPacket, Ping ping) {
+		sendObject(eventLinkPacket.sourceServer, new EventLinkMessageEvent(ping.sourcePlayer, "Reply received from " + serverName));
+	}
+
+	void processEvent(EventLinkPacket eventLinkPacket, RoutingTable rt) {
+		p.routingTableManager.combineTable(eventLinkPacket.sourceServer, rt);
+	}
+
+	void processEvent(EventLinkPacket eventLinkPacket, final Event finalEvent) {
+		p.getServer().getScheduler().scheduleSyncDelayedTask(p, new Runnable() {
+
+			public void run() {
+				p.getServer().getPluginManager().callEvent(finalEvent);
+			}
+
+		});
+	}
+
 }

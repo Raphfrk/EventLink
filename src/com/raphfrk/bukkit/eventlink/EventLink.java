@@ -4,9 +4,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -39,26 +42,27 @@ public class EventLink extends JavaPlugin {
 	static final String slash = System.getProperty("file.separator");
 
 	Server server;
-	
+
 	ConnectionManager connectionManager;
 	RoutingTableManager routingTableManager;
-	
+
 	PluginManager pm;
-	
+
 	EventLinkCustomListener customListener = new EventLinkCustomListener(this);
 	EventLinkPlayerListener playerListener = new EventLinkPlayerListener(this);
-	
+	EventLinkWorldListener worldListener = new EventLinkWorldListener(this);
+
 	public void onEnable() {
-		
+
 		String name = "EventLink";
 
 		pm = getServer().getPluginManager();
 		server = getServer();
-		
+
 		MiscUtils.setLogger(getServer().getLogger(), "[EventLink]");
-		
+
 		log(name + " initialized");
-		
+
 		pluginDirectory = this.getDataFolder();
 
 		if( !readConfig() ) {
@@ -79,23 +83,36 @@ public class EventLink extends JavaPlugin {
 					this.password,
 					this.portnum
 			);
-			
+
 			connectionManager = new ConnectionManager(this, serverName, password);
 			routingTableManager = new RoutingTableManager(this, password);
+			addServer();
 			addOnlinePlayers();
-			
+			addWorlds();
+
 		} else {
 			log("Unable to start server, server name not set");
 		}
-		
+
 		pm.registerEvent(Type.CUSTOM_EVENT, customListener, Priority.Normal, this);
-		
 		pm.registerEvent(Type.PLAYER_JOIN, playerListener, Priority.Normal, this);
 		pm.registerEvent(Type.PLAYER_QUIT, playerListener, Priority.Normal, this);
+		pm.registerEvent(Type.WORLD_LOAD, worldListener, Priority.Normal, this);
+
+		if(!this.serverName.trim().equals("")) {
+			addServer();
+			addOnlinePlayers();
+			addWorlds();
+		}
 
 	}
 
 	public void onDisable() {
+
+		delServer();
+		delOnlinePlayers();
+		delWorlds();
+
 		if(eventLinkServer!=null) {
 			eventLinkServer.stop();
 			eventLinkServer = null;
@@ -110,12 +127,48 @@ public class EventLink extends JavaPlugin {
 		}
 
 	}
-	
+
 	private void addOnlinePlayers() {
 		Player[] players = getServer().getOnlinePlayers();
 		for(Player player : players) {
 			routingTableManager.addEntry("players", player.getName());
 		}
+	}
+
+	private void addWorlds() {
+		List<World> worlds = getServer().getWorlds();
+		for(World world : worlds) {
+			routingTableManager.addEntry("worlds", world.getName());
+		}
+	}
+
+	private void delOnlinePlayers() {
+		Player[] players = getServer().getOnlinePlayers();
+		for(Player player : players) {
+			routingTableManager.deleteEntry("players", player.getName());
+		}
+		routingTableManager.deleteTable("players");
+	}
+
+	private void delWorlds() {
+		List<World> worlds = getServer().getWorlds();
+		for(World world : worlds) {
+			routingTableManager.deleteEntry("worlds", world.getName());
+		}
+		routingTableManager.deleteTable("worlds");
+	}
+
+	private void addServer() {
+		if(!this.serverName.trim().equals("")) {
+			routingTableManager.addEntry("servers", this.serverName);
+		}
+	}
+	
+	private void delServer() {
+		if(!this.serverName.trim().equals("")) {
+			routingTableManager.deleteEntry("servers", this.serverName);
+		}
+		routingTableManager.deleteTable("servers");
 	}
 
 	private boolean readConfig() {
@@ -162,9 +215,10 @@ public class EventLink extends JavaPlugin {
 	public boolean onCommand(CommandSender commandSender, Command command, String commandLabel, String[] args) {
 
 		if(!commandSender.isOp()) {
-			return false;
+			commandSender.sendMessage("You do not have sufficient user level for this command");
+			return true;
 		}
-		
+
 		if(command.getName().equals("eventlink")) {
 
 			if(args[0].equalsIgnoreCase("add")) {
@@ -206,6 +260,9 @@ public class EventLink extends JavaPlugin {
 				commandSender.sendMessage(SSLUtils.removeCertificate(new File(pluginDirectory + slash + clientKeys), this.password, args[1]));
 				commandSender.sendMessage(connectionManager.deleteConnection(args[1]));
 				return true;
+			} else if(args[0].equals("routes")) {
+				routingTableManager.listTablesToLog();
+				return true;
 			} else if(args[0].equals("refresh")) {
 				if(connectionManager != null) {
 					commandSender.sendMessage("Refreshing connections");
@@ -213,7 +270,9 @@ public class EventLink extends JavaPlugin {
 				}
 				return true;
 			} else if(args[0].equals("ping") && args.length > 1 && commandSender instanceof Player) {
-				connectionManager.sendObject(args[1], new Ping(((Player)commandSender).getName()));
+				if(!connectionManager.sendObject(args[1], new Ping(((Player)commandSender).getName()))) {
+					commandSender.sendMessage(args[1] + " is not a valid ping target");
+				}
 				return true;
 			} else if(args[0].equals("who")) {
 				Map<String,RoutingTableEntry> playerMap = routingTableManager.getEntries("players");
@@ -227,7 +286,7 @@ public class EventLink extends JavaPlugin {
 			}
 
 		}
-		
+
 		return false;
 
 	}
@@ -275,16 +334,33 @@ public class EventLink extends JavaPlugin {
 		}
 
 	}
-	
+
 	public void log(String message) {
 		MiscUtils.log(message);
 	}
-	
+
 	public boolean sendEvent(String target, Event event) {
 		if(connectionManager==null) {
 			return false;
 		}
 		return connectionManager.sendObject(target, event);
+	}
+
+	public boolean addRouteEntry(String table, String name) {
+		return routingTableManager.addEntry(table, name);
+	}
+
+	public boolean deleteRouteEntry(String table, String name) {
+		return routingTableManager.deleteEntry(table, name);
+	}
+
+	public String getKeyLocation(String table, String name) {
+		return routingTableManager.getLocation(table, name);
+
+	}
+
+	public Set<String> copyKeys(String table) {
+		return routingTableManager.copyKeySet(table);
 	}
 
 }

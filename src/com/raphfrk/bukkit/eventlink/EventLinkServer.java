@@ -11,8 +11,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.Principal;
-import java.security.cert.CertPathValidatorException;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLException;
@@ -250,7 +250,7 @@ public class EventLinkServer {
 		} catch (SSLException ssle ) {
 			p.log("Connection attempt with unencrypted connection from IP: " + s.getInetAddress());
 			p.log("Closing stream");
-			ssle.printStackTrace();
+			//ssle.printStackTrace();
 			SSLUtils.closeSocket(s);
 			return;
 		} catch (IOException ioe) {

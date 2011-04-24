@@ -13,27 +13,28 @@ public class EventLinkCustomListener extends CustomEventListener {
 	}
 
 	public void onCustomEvent(Event event) {
+		if(event instanceof EventLinkMessageEvent) {
+			onCustomEvent((EventLinkMessageEvent)event);
+		}
+	}
+	
+	public void onCustomEvent(EventLinkMessageEvent eventLinkMessage) {
 
-		if(event.getEventName().equals("EventLinkMessage")) {
-			EventLinkMessageEvent eventLinkMessage = (EventLinkMessageEvent)event;
+		String playerName = eventLinkMessage.getTarget();
 
-			String playerName = eventLinkMessage.getTarget();
-
-			Player player;
-			if(playerName != null) {
-				player = p.getServer().getPlayer(playerName);
-			} else {
-				return;
-			}
-
-			String message = eventLinkMessage.getMessage();
-			if(player!=null && message!=null) {
-
-				player.sendMessage(message);
-
-			}
+		Player player;
+		if(playerName != null) {
+			player = p.getServer().getPlayer(playerName);
+		} else {
+			return;
 		}
 
+		String message = eventLinkMessage.getMessage();
+		if(player!=null && message!=null) {
+
+			player.sendMessage(message);
+
+		}
 	}
 
 }

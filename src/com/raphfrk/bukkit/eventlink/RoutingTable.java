@@ -103,7 +103,7 @@ public class RoutingTable implements Serializable {
 			}
 		}
 
-		return true;
+		return changed;
 
 	}
 
@@ -117,6 +117,13 @@ public class RoutingTable implements Serializable {
 
 	public synchronized void clearChanged() {
 		changed = false;
+	}
+	
+	public synchronized void listToLog(EventLink p) {
+		p.log("Routing Table Name: " + getTableName() + ((changed)?(" Changed"):(" Not changed")));
+		for(String key : tableEntries.keySet() ) {
+			p.log(key + " " + tableEntries.get(key));
+		}
 	}
 
 }

@@ -3,7 +3,9 @@ package com.raphfrk.bukkit.eventlink;
 import java.io.File;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class RoutingTableManager {
 	
@@ -62,6 +64,64 @@ public class RoutingTableManager {
 		
 	}
 	
+	public synchronized String getNextHop(String table, String name) {
+		RoutingTable routingTable = routingTables.get(table);
+		if(routingTable == null) {
+			return null;
+		}
+		Map<String, RoutingTableEntry> entries = routingTable.getEntries();
+		
+		if(entries == null) {
+			return null;
+		}
+		
+		RoutingTableEntry entry = entries.get(name);
+		if(entry == null) {
+			return null;
+		}
+		
+		return entry.getNextServer();
+	}
+	
+	public synchronized String getLocation(String table, String name) {
+		RoutingTable routingTable = routingTables.get(table);
+		if(routingTable == null) {
+			return null;
+		}
+		Map<String, RoutingTableEntry> entries = routingTable.getEntries();
+		
+		if(entries == null) {
+			return null;
+		}
+		
+		RoutingTableEntry entry = entries.get(name);
+		if(entry == null) {
+			return null;
+		}
+		
+		return entry.getLocation();
+	}
+	
+	public synchronized Set<String> copyKeySet(String table) {
+		RoutingTable routingTable = routingTables.get(table);
+		if(routingTable == null) {
+			return null;
+		}
+		Map<String, RoutingTableEntry> entries = routingTable.getEntries();
+		
+		if(entries == null) {
+			return null;
+		}
+		
+		LinkedHashSet<String> newSet = new LinkedHashSet<String>();
+		
+		for(String key : entries.keySet()) {
+			newSet.add(key);
+		}
+		
+		return newSet;
+	}
+	
 	public synchronized boolean addEntry(String table, String name) {
 		
 		if(!routingTables.containsKey(table)) {
@@ -78,6 +138,15 @@ public class RoutingTableManager {
 			updateSync.notify();
 		}
 		
+		return true;
+	}
+	
+	public synchronized boolean deleteTable(String table) {
+		if(!routingTables.containsKey(table)) {
+			return false;
+		}
+		
+		routingTables.remove(table);
 		return true;
 	}
 	
@@ -115,7 +184,20 @@ public class RoutingTableManager {
 		
 		RoutingTable rt = routingTables.get(table);
 		
-		return rt.combineTable(source, routingTable);
+		boolean ret = rt.combineTable(source, routingTable);
+		
+		sendUpdatedTables();
+		
+		return ret;
+		
+	}
+	
+	public synchronized void listTablesToLog() {
+		
+		for(String key:routingTables.keySet()) {
+			RoutingTable table = routingTables.get(key);
+			table.listToLog(p);
+		}
 		
 	}
 	
@@ -125,6 +207,7 @@ public class RoutingTableManager {
 			
 			RoutingTable table = routingTables.get(key);
 			if(table.getChanged()) {
+				table.clearChanged();
 				sendTableToAll(table);
 			}
 			

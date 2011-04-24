@@ -120,12 +120,12 @@ public class EventLinkClient {
 					}
 
 				}
-				
+
 				OutputStream socketOut = socket.getOutputStream();
 				InputStream socketIn = socket.getInputStream(); 
-				
-				peer = sslSession.getPeerPrincipal();
 
+				peer = sslSession.getPeerPrincipal();
+				
 				ObjectOutputStream out = new ObjectOutputStream(socketOut);
 
 				p.log("Sending server name: " + serverName);
@@ -168,8 +168,8 @@ public class EventLinkClient {
 
 
 			} catch (SSLPeerUnverifiedException pue) {
-				p.log(pue.getLocalizedMessage());
-				pue.printStackTrace();
+				//p.log(pue.getLocalizedMessage());
+				//pue.printStackTrace();
 				p.log("Unable to auth target server: " + hostname + ":" + portnum );
 				MiscUtils.sendAsyncMessage(p, p.server, commandSender, "Unable to auth target server");
 				SSLUtils.closeSocket(socket);

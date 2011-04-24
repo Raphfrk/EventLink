@@ -22,7 +22,6 @@ class ReloadableTrustManager implements X509TrustManager  {
 		reloadTrustStore(clientFile, password);
 	}
 
-	@Override
 	public void checkClientTrusted(X509Certificate[] arg0, String arg1)
 	throws CertificateException {
 		synchronized(syncObject) {
@@ -31,7 +30,6 @@ class ReloadableTrustManager implements X509TrustManager  {
 
 	}
 
-	@Override
 	public void checkServerTrusted(X509Certificate[] arg0, String arg1)
 	throws CertificateException {
 		synchronized(syncObject) {
@@ -40,7 +38,6 @@ class ReloadableTrustManager implements X509TrustManager  {
 
 	}
 
-	@Override
 	public X509Certificate[] getAcceptedIssuers() {
 		synchronized(syncObject) {
 			return trustManager.getAcceptedIssuers();
