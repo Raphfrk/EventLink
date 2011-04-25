@@ -272,8 +272,16 @@ public class EventLink extends JavaPlugin {
 				}
 				return true;
 			} else if(args[0].equals("ping") && args.length > 1 && commandSender instanceof Player) {
-				if(!connectionManager.sendObject(args[1], new Ping(((Player)commandSender).getName()))) {
-					commandSender.sendMessage(args[1] + " is not a valid ping target");
+				String[] targets = new String[args.length-1];
+				for(int cnt=0;cnt<args.length-1;cnt++) {
+					targets[cnt] = args[cnt+1];
+				}
+				if(!connectionManager.sendObject(targets, new Ping(((Player)commandSender).getName()))) {
+					if(args.length==2) {
+						commandSender.sendMessage(args[1] + " is not a valid ping target");
+					} else {
+						commandSender.sendMessage("unknown target list");
+					}
 				}
 				return true;
 			} else if(args[0].equals("who")) {

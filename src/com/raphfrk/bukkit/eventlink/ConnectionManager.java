@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -65,6 +66,12 @@ public class ConnectionManager {
 
 		}
 	}
+	
+	boolean sendObject(String[] targets, Object payload) {
+		EventLinkPacket eventLinkPacket = new EventLinkPacket(serverName, targets, payload);
+
+		return sendPacket(eventLinkPacket);
+	}
 
 	boolean sendObject(String target, Object payload) {
 
@@ -76,35 +83,79 @@ public class ConnectionManager {
 
 	boolean sendPacket(EventLinkPacket eventLinkPacket) {
 
-		String target = eventLinkPacket.destinationServer;
+		boolean sent = false;
 
-		String nextHop = p.routingTableManager.getNextHop("servers", target);
+		String[] destinationBackup = eventLinkPacket.destinationServer;
+		final int length = destinationBackup.length;
 
-		if(target.equals(p.serverName)) {
-			if( (eventLinkPacket.timeToLive--) >= 0) {
-				processPacket(eventLinkPacket);
+		for(int cnt1=0;cnt1<length;cnt1++) {
+			String currentTarget = destinationBackup[cnt1];
+			destinationBackup[cnt1] = null;
+
+			if(currentTarget == null) {
+				continue;
 			}
-			return true;
-		}
 
-		synchronized(activeConnections) {
-			if(getEnd()) {
-				p.log("Attempting to send object while connection manager is stopping");
-				return false;
+			if(currentTarget.equals(p.serverName)) {
+				String[] temp = new String[1];
+				temp[0] = currentTarget;
+
+				processPacket(new EventLinkPacket(eventLinkPacket, temp));
+				sent = true;
+				continue;
 			}
-			if(activeConnections.containsKey(target)) {
-				Connection targetConnection = activeConnections.get(target);
-				targetConnection.send(eventLinkPacket);
-				return true;
-			} else if(activeConnections.containsKey(nextHop)) {
-				Connection targetConnection = activeConnections.get(nextHop);
-				if( (eventLinkPacket.timeToLive--) >= 0) {
-					targetConnection.send(eventLinkPacket);
+
+			String currentNextHop = p.routingTableManager.getNextHop("servers", currentTarget);
+
+			ArrayList<String> targets = new ArrayList<String>();
+			targets.add(currentTarget);
+
+			if(currentNextHop != null) {
+
+				for(int cnt2=cnt1+1;cnt2<length;cnt2++) {
+					String target = destinationBackup[cnt2];
+					String nextHop = p.routingTableManager.getNextHop("servers", target);
+					if(!target.equals(p.serverName) && nextHop.equals(currentNextHop)) {
+						destinationBackup[cnt2] = null;
+						targets.add(target);
+					}
 				}
-				return true;
+
+			}
+
+			int length2 = targets.size();
+
+			String[] temp = new String[length2];
+
+			for(int cnt2=0;cnt2<length2;cnt2++) {
+				temp[cnt2] = targets.get(cnt2);
+			}
+
+			EventLinkPacket newPacket = new EventLinkPacket(eventLinkPacket, temp);
+
+			synchronized(activeConnections) {
+				if(getEnd()) {
+					p.log("Attempting to send object while connection manager is stopping");
+					return false;
+				}
+				Connection oneHop = activeConnections.get(temp[0]);
+				Connection multiHop = activeConnections.get(currentNextHop);
+				
+				if(activeConnections.containsKey(currentNextHop)) {
+					if( (newPacket.timeToLive--) >= 0) {
+						sent = true;
+						multiHop.send(newPacket);
+					}
+				} else if(oneHop != null) {
+					if( (newPacket.timeToLive--) >= 0) {
+						sent = true;
+						oneHop.send(newPacket);
+					}
+				}
 			}
 		}
-		return false;
+
+		return sent;
 
 	}
 
@@ -405,7 +456,7 @@ public class ConnectionManager {
 
 	void processPacket(EventLinkPacket eventLinkPacket) {
 		Object payload = eventLinkPacket.payload;
-		if(!eventLinkPacket.destinationServer.equals(p.serverName)) {
+		if(eventLinkPacket.destinationServer.length != 1 || (!eventLinkPacket.destinationServer[0].equals(p.serverName))) {
 			sendPacket(eventLinkPacket);
 		} else if(payload instanceof Ping) {
 			processEvent(eventLinkPacket, (Ping)eventLinkPacket.payload);
