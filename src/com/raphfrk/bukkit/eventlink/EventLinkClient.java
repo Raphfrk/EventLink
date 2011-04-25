@@ -157,6 +157,7 @@ public class EventLinkClient {
 					if(certs!=null) {
 						if(SSLUtils.addCertificate(trustFile, password, alias, certs[0])) {
 							MiscUtils.sendAsyncMessage(p, p.server, commandSender, peerName + " added to trust store");
+							p.eventLinkServer.reload();
 						}
 					}
 					p.connectionManager.addConnection(peerName, password, hostname, portnum);

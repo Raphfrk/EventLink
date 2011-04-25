@@ -431,7 +431,7 @@ public class SSLUtils {
 
 		synchronized(fileLock) {
 			try {
-				EventLink.logger.log("Writing new cert to store: " + file);
+				EventLink.logger.log("Saving certs to store: " + file);
 				out = new FileOutputStream(file);
 				ks.store(out, passwordArray);
 			} catch (KeyStoreException e) {
@@ -452,6 +452,7 @@ public class SSLUtils {
 			} finally {
 				if(out!=null) {
 					try {
+						out.flush();
 						out.close();
 					} catch (IOException e) {
 						return false;

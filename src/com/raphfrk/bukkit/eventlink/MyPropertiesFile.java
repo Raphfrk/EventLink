@@ -48,6 +48,8 @@ public class MyPropertiesFile {
 		}
 
 		for( String line : lines ) {
+			
+			line = line.trim();
 						
 			if( line.indexOf('#') == -1 ) {
 

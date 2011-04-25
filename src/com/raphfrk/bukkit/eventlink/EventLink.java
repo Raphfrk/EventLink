@@ -212,6 +212,10 @@ public class EventLink extends JavaPlugin {
 	@Override
 	public boolean onCommand(CommandSender commandSender, Command command, String commandLabel, String[] args) {
 
+		if(args.length == 0) {
+			return false;
+		}
+		
 		if(!commandSender.isOp()) {
 			commandSender.sendMessage("You do not have sufficient user level for this command");
 			return true;
@@ -257,6 +261,7 @@ public class EventLink extends JavaPlugin {
 			} else if(args.length>1 && (args[0].equals("delete") || args[0].equals("del"))) {
 				commandSender.sendMessage(SSLUtils.removeCertificate(new File(pluginDirectory + slash + clientKeys), this.password, args[1]));
 				commandSender.sendMessage(connectionManager.deleteConnection(args[1]));
+				eventLinkServer.reload();
 				return true;
 			} else if(args[0].equals("routes")) {
 				routingTableManager.listTablesToLog();
