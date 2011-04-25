@@ -21,5 +21,5 @@ public class EventLinkMessageEvent extends Event {
 	String getTarget() {
 		return target;
 	}
-
+	
 }

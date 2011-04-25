@@ -43,10 +43,7 @@ public class RoutingTableManager {
 			end = true;
 		}
 		
-		synchronized(updateSync) {
-			updatePending = true;
-			updateSync.notify();
-		}
+		flagUpdatePending();
 		
 		try {
 			t.join();
@@ -133,10 +130,7 @@ public class RoutingTableManager {
 		
 		routingTable.addEntry(name, p.serverName);
 		
-		synchronized(updateSync) {
-			updatePending = true;
-			updateSync.notify();
-		}
+		flagUpdatePending();
 		
 		return true;
 	}
@@ -147,6 +141,7 @@ public class RoutingTableManager {
 		}
 		
 		routingTables.remove(table);
+		flagUpdatePending();
 		return true;
 	}
 	
@@ -162,10 +157,7 @@ public class RoutingTableManager {
 			return false;
 		}
 		
-		synchronized(updateSync) {
-			updatePending = true;
-			updateSync.notify();
-		}
+		flagUpdatePending();
 		
 		return true;
 	}
@@ -184,9 +176,10 @@ public class RoutingTableManager {
 		
 		RoutingTable rt = routingTables.get(table);
 		
-		boolean ret = rt.combineTable(source, routingTable);
+		boolean ret = rt.combineTable(source, p.serverName, routingTable);
 		
 		sendUpdatedTables();
+		flagUpdatePending();
 		
 		return ret;
 		
@@ -198,7 +191,7 @@ public class RoutingTableManager {
 			RoutingTable table = routingTables.get(key);
 			table.listToLog(p);
 		}
-		
+
 	}
 	
 	private synchronized void sendUpdatedTables() {
@@ -213,6 +206,30 @@ public class RoutingTableManager {
 			
 		}
 		
+	}
+	
+	public synchronized void clearRoutesThrough(String server) {
+		for(String key:routingTables.keySet()) {
+			
+			RoutingTable table = routingTables.get(key);
+			table.clearRoutesThrough(server);
+			
+		}
+		flagUpdatePending();
+	}
+	
+	private synchronized void sendAllTablesToAll() {
+		Enumeration<String> aliases = SSLUtils.getAliases(new File(p.pluginDirectory + EventLink.slash + p.clientKeys), password);
+		
+		while(aliases.hasMoreElements()) {
+			
+			String current = aliases.nextElement();
+			String currentServerName = (current.split(";"))[0];
+			
+			if(current.contains(";") && p.connectionManager != null && p.connectionManager.isConnected(currentServerName)) {
+				sendAllTablesTo(currentServerName);
+			}	
+		}
 	}
 	
 	private synchronized void sendTableToAll(RoutingTable table) {
@@ -243,13 +260,36 @@ public class RoutingTableManager {
 		}
 	}
 	
+	private void flagUpdatePending() {
+		synchronized(updateSync) {
+			updatePending = true;
+			updateSync.notify();
+		}
+	}
+	
 	private class RoutingTableUpdater implements Runnable {
 		
 		public void run() {
+		
+			long lastUpdate = -1;
+			
+			int cnt = 0;
 			
 			boolean localEnd = false;
 			
 			while(!localEnd) {
+				cnt++;
+				
+				if(cnt>=20) {
+					cnt = 0;
+					long currentTime = System.currentTimeMillis();
+
+					if(currentTime > lastUpdate + 60000) {
+						lastUpdate = currentTime;
+						sendAllTablesToAll();
+					}
+				}
+				
 				boolean resend = false;
 				synchronized(updateSync) {
 					if(updatePending) {

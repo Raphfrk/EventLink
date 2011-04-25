@@ -20,6 +20,24 @@ public class RoutingTable implements Serializable {
 		this.tableName = name;
 	}
 	
+	@Override
+	public synchronized String toString() {
+		Iterator<String> itr = tableEntries.keySet().iterator();
+		
+		StringBuilder sb = new StringBuilder("Table Name: " + tableName + " ");
+		
+		while(itr.hasNext()) {
+			String entryName = itr.next();
+			
+			RoutingTableEntry tableEntry = tableEntries.get(entryName);
+			
+			sb.append("[" + entryName + " [" + tableEntry + "]" );
+			
+		}
+		
+		return sb.toString();
+	}
+	
 	public synchronized Map<String,RoutingTableEntry> getEntries() {
 		
 		Set<String> keys = tableEntries.keySet();
@@ -61,8 +79,24 @@ public class RoutingTable implements Serializable {
 		changed = true;
 		return true;
 	}
+	
+	public synchronized void clearRoutesThrough(String server) {
+		Iterator<String> itr = tableEntries.keySet().iterator();
+		
+		while(itr.hasNext()) {
+			String entryName = itr.next();
+			
+			RoutingTableEntry tableEntry = tableEntries.get(entryName);
+			
+			if(tableEntry.getNextServer().equals(server)) {
+				itr.remove();
+				changed = true;
+			}
+			
+		}
+	}
 
-	public synchronized boolean combineTable(String source, RoutingTable other) {
+	public synchronized boolean combineTable(String source, String thisServer, RoutingTable other) {
 
 		if(!other.getTableName().equals(tableName)) {
 			return false;
@@ -90,13 +124,16 @@ public class RoutingTable implements Serializable {
 
 			RoutingTableEntry otherTableEntry = other.tableEntries.get(entryName);
 
-			if(tableEntry == null || tableEntry.getHops() > otherTableEntry.getHops() + 1) {
-				changed = true;
-				RoutingTableEntry newTableEntry = new RoutingTableEntry();
-				newTableEntry.setHops(otherTableEntry.getHops() + 1);
-				newTableEntry.setLocation(otherTableEntry.getLocation());
-				newTableEntry.setNextServer(source);
-				tableEntries.put(entryName, newTableEntry);
+			if(tableEntry == null || tableEntry.getHops() > otherTableEntry.getHops() + 1 ) {
+				if(!otherTableEntry.getNextServer().equals(thisServer)) {
+					changed = true;
+
+					RoutingTableEntry newTableEntry = new RoutingTableEntry();
+					newTableEntry.setHops(otherTableEntry.getHops() + 1);
+					newTableEntry.setLocation(otherTableEntry.getLocation());
+					newTableEntry.setNextServer(source);
+					tableEntries.put(entryName, newTableEntry);
+				}	
 			} else if (tableEntry.getNextServer().equals(source) && !tableEntry.getLocation().equals(otherTableEntry.getLocation())) {
 				changed = true;
 				tableEntry.setLocation(otherTableEntry.getLocation());

@@ -178,6 +178,7 @@ public class Connection  {
 					if(endIn) {
 						p.log("Closing connection to " + serverName);
 						connectionManager.activeConnections.remove(serverName);
+						p.routingTableManager.clearRoutesThrough(serverName);
 					}
 				}
 			}
@@ -276,6 +277,7 @@ public class Connection  {
 					if(endOut) {
 						p.log("Closing connection to " + serverName);
 						connectionManager.activeConnections.remove(serverName);
+						p.routingTableManager.clearRoutesThrough(serverName);
 					}
 				}
 			}

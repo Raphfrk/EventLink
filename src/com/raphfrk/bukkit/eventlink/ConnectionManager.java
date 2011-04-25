@@ -5,6 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -85,7 +86,7 @@ public class ConnectionManager {
 
 		boolean sent = false;
 
-		String[] destinationBackup = eventLinkPacket.destinationServer;
+		String[] destinationBackup = eventLinkPacket.destinationServers;
 		final int length = destinationBackup.length;
 
 		for(int cnt1=0;cnt1<length;cnt1++) {
@@ -130,7 +131,7 @@ public class ConnectionManager {
 			for(int cnt2=0;cnt2<length2;cnt2++) {
 				temp[cnt2] = targets.get(cnt2);
 			}
-
+			
 			EventLinkPacket newPacket = new EventLinkPacket(eventLinkPacket, temp);
 
 			synchronized(activeConnections) {
@@ -229,6 +230,7 @@ public class ConnectionManager {
 			}
 			if(activeConnections.containsKey(serverName) && !activeConnections.get(serverName).getAlive()) {
 				activeConnections.remove(serverName);
+				p.routingTableManager.clearRoutesThrough(serverName);
 			}
 			if(activeConnections.containsKey(serverName) && activeConnections.get(serverName).getAlive()) {
 				p.log(serverName + " already has a connection, closing");
@@ -455,8 +457,18 @@ public class ConnectionManager {
 	}
 
 	void processPacket(EventLinkPacket eventLinkPacket) {
+		
+		if(eventLinkPacket == null) {
+			return;
+		} 
+		
 		Object payload = eventLinkPacket.payload;
-		if(eventLinkPacket.destinationServer.length != 1 || (!eventLinkPacket.destinationServer[0].equals(p.serverName))) {
+
+		if(eventLinkPacket.destinationServers == null || eventLinkPacket.destinationServers.length == 0) {
+			return;
+		} else if(eventLinkPacket.destinationServers.length == 1 && eventLinkPacket.destinationServers[0] == null ) {
+			return;
+		} else if(eventLinkPacket.destinationServers.length != 1 || (!eventLinkPacket.destinationServers[0].equals(p.serverName))) {
 			sendPacket(eventLinkPacket);
 		} else if(payload instanceof Ping) {
 			processEvent(eventLinkPacket, (Ping)eventLinkPacket.payload);
