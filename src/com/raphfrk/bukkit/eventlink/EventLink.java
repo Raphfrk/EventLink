@@ -16,6 +16,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -34,9 +35,9 @@ public class EventLink extends JavaPlugin {
 	HashSet<String> admins = new HashSet<String>();
 
 	File pluginDirectory;
-	
+
 	static MiscUtils.LogInstance logger = MiscUtils.getLogger("[EventLink]");
-	
+
 	EventLinkServer eventLinkServer = null;
 
 	boolean nameUpdated = false;
@@ -136,7 +137,7 @@ public class EventLink extends JavaPlugin {
 			routingTableManager.addEntry("players", player.getName());
 		}
 	}
-	
+
 	private void addWorlds() {
 		List<World> worlds = getServer().getWorlds();
 		for(World world : worlds) {
@@ -165,7 +166,7 @@ public class EventLink extends JavaPlugin {
 			routingTableManager.addEntry("servers", this.serverName);
 		}
 	}
-	
+
 	private void delServer() {
 		if(!this.serverName.trim().equals("")) {
 			routingTableManager.deleteEntry("servers", this.serverName);
@@ -215,7 +216,7 @@ public class EventLink extends JavaPlugin {
 		if(args.length == 0) {
 			return false;
 		}
-		
+
 		if(!commandSender.isOp()) {
 			commandSender.sendMessage("You do not have sufficient user level for this command");
 			return true;
@@ -223,7 +224,18 @@ public class EventLink extends JavaPlugin {
 
 		if(command.getName().equals("eventlink")) {
 
-			if(args[0].equalsIgnoreCase("add")) {
+			if(commandSender instanceof Player && args[0].equalsIgnoreCase("itemgen") && args.length > 2) {
+				Player player = (Player)commandSender;
+				try {
+					int typeId = Integer.parseInt(args[1]);
+					int amount = Integer.parseInt(args[2]);
+					player.getInventory().addItem(new ItemStack(typeId, amount));
+				} catch (NumberFormatException nfe) {
+					player.sendMessage("Unable to parse " + args[1] + " and " + args[2] + " as integers");
+				}
+			}
+					
+					if(args[0].equalsIgnoreCase("add")) {
 				if( args.length > 1 ) {
 					new EventLinkClient(
 							this,
@@ -349,46 +361,46 @@ public class EventLink extends JavaPlugin {
 	public void log(String message) {
 		logger.log(message);
 	}
-	
-	
-    /**
-     * Tests if a player is listed on the admin_list for the eventlink.txt file
-     *
-     * @param player Player to test
-     * @return true if the player is on the admin list or is an Op
-     */
+
+
+	/**
+	 * Tests if a player is listed on the admin_list for the eventlink.txt file
+	 *
+	 * @param player Player to test
+	 * @return true if the player is on the admin list or is an Op
+	 */
 
 	public boolean isAdmin(Player player) {
 		return player.isOp() || admins.contains(player.getName().toLowerCase());
 	}
-	
-    /**
-     * Sends an event to a single server servers.  
-     * 
-     * NOTE: The packet may be lost en-route even if the function returns true
-     *
-     * @param target destination servers.
-     * @return true if a route exists to the target
-     */
-	
+
+	/**
+	 * Sends an event to a single server servers.  
+	 * 
+	 * NOTE: The packet may be lost en-route even if the function returns true
+	 *
+	 * @param target destination servers.
+	 * @return true if a route exists to the target
+	 */
+
 	public boolean sendEvent(String target, Event event) {
 		if(connectionManager==null) {
 			return false;
 		}
 		return connectionManager.sendObject(target, event);
 	}
-	
-    /**
-     * Sends an event to multiple servers.  This will only send the  
-     * packet once to each directly connected server.  This has the 
-     * potential to improve broadcast bandwidth usage.
-     *
-     * NOTE: The packet may be lost en-route even if the function returns true
-     *
-     * @param target Array of destination servers.
-     * @return true if a route exists to the target
-     */
-	
+
+	/**
+	 * Sends an event to multiple servers.  This will only send the  
+	 * packet once to each directly connected server.  This has the 
+	 * potential to improve broadcast bandwidth usage.
+	 *
+	 * NOTE: The packet may be lost en-route even if the function returns true
+	 *
+	 * @param target Array of destination servers.
+	 * @return true if a route exists to the target
+	 */
+
 	public boolean sendEvent(String[] target, Event event) {
 		if(connectionManager==null) {
 			return false;
@@ -396,82 +408,92 @@ public class EventLink extends JavaPlugin {
 		return connectionManager.sendObject(target, event);
 	}
 
-    /**
-     * Route entries are markers that can be seen (and routed to) by
-     * all other servers.
-     * 
-     * There are 3 reserved table
-     * 
-     * "servers":  The servers that are online
-     * "players":  The players that are online
-     * "worlds":   The worlds for all connected servers
-     * 
-     * NOTE: If there is a collision, then the closest entry will be routed to.
-     * 
-     * This means that unique names should be used for servers and worlds.
-     * 
-     * This tables are auto-updated and shouldn't be modified by other plugins
-     *
-     * NOTE: The packet may be lost en-route even if the function returns true
-     *
-     *
-     */
-	
-    /**
-     * Adds a route entry for the local server.
-     * 
-     * This will be visible by all the other servers in the cluster
-     * 
-     * @param table This is the table name/type of route entry
-     * @param name This is the specific name of the entry
-     * @return true if the entry was added locally
-     */
-	
+	/**
+	 * Route entries are markers that can be seen (and routed to) by
+	 * all other servers.
+	 * 
+	 * There are 3 reserved table
+	 * 
+	 * "servers":  The servers that are online
+	 * "players":  The players that are online
+	 * "worlds":   The worlds for all connected servers
+	 * 
+	 * NOTE: If there is a collision, then the closest entry will be routed to.
+	 * 
+	 * This means that unique names should be used for servers and worlds.
+	 * 
+	 * This tables are auto-updated and shouldn't be modified by other plugins
+	 *
+	 * NOTE: The packet may be lost en-route even if the function returns true
+	 *
+	 *
+	 */
+
+	/**
+	 * Adds a route entry for the local server.
+	 * 
+	 * This will be visible by all the other servers in the cluster
+	 * 
+	 * @param table This is the table name/type of route entry
+	 * @param name This is the specific name of the entry
+	 * @return true if the entry was added locally
+	 */
+
 	public boolean addRouteEntry(String table, String name) {
 		return routingTableManager.addEntry(table, name);
 	}
 
-    /**
-     * Deletes a route entry for the local server.
-     * 
-     * This will be deleted for all the other servers in the cluster
-     * 
-     * @param table This is the table name/type of route entry
-     * @param name This is the specific name of the entry
-     * @return true if the entry was deleted
-     */
-	
+	/**
+	 * Deletes a route entry for the local server.
+	 * 
+	 * This will be deleted for all the other servers in the cluster
+	 * 
+	 * @param table This is the table name/type of route entry
+	 * @param name This is the specific name of the entry
+	 * @return true if the entry was deleted
+	 */
+
 	public boolean deleteRouteEntry(String table, String name) {
 		return routingTableManager.deleteEntry(table, name);
 	}
 
-    /**
-     * Gets the current location of a routing entry
-     * 
-     * If there is more than one match, the closest entry will be returned
-     * 
-     * @param table This is the table name/type of route entry
-     * @param name This is the specific name of the entry
-     * @return the name of the server where the entry is located
-     */
-	
+	/**
+	 * Gets the current location of a routing entry
+	 * 
+	 * If there is more than one match, the closest entry will be returned
+	 * 
+	 * @param table This is the table name/type of route entry
+	 * @param name This is the specific name of the entry
+	 * @return the name of the server where the entry is located
+	 */
+
 	public String getEntryLocation(String table, String name) {
 		return routingTableManager.getLocation(table, name);
 
 	}
 
-    /**
-     * Copies the names of all entries in a particular table
-     * 
-     * The name only appears once, even if there are multiple entries with
-     * the same name
-     * 
-     * @param table This is the table name/type of route entry
-     * @return A set containing all the entry names for the table
-     */
-	
+	/**
+	 * Copies the names of all entries in a particular table
+	 * 
+	 * The name only appears once, even if there are multiple entries with
+	 * the same name
+	 * 
+	 * @param table This is the table name/type of route entry
+	 * @return A set containing all the entry names for the table
+	 */
+
 	public Set<String> copyEntries(String table) {
 		return routingTableManager.copyKeySet(table);
+	}
+
+	/**
+	 * This gives the name of the current server
+	 * 
+	 * @return The name of the server
+	 */
+
+	public String getServerName() {
+		return serverName;
 	}
 
 }

@@ -4,6 +4,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
@@ -35,7 +36,7 @@ public class Connection  {
 
 	private boolean endIn = false;
 	private boolean endOut = false;
-	
+
 	Connection(ConnectionManager connectionManager, Object syncObject, EventLink p, Socket s, ObjectInputStream in, ObjectOutputStream out, String serverName) {
 		this.connectionManager = connectionManager;
 		this.p = p;
@@ -64,11 +65,11 @@ public class Connection  {
 		inThread.start();
 
 	}
-	
+
 	String getServerName() {
 		return serverName;
 	}
-	
+
 	void stop() {
 		synchronized(endSync) {
 			end = true;
@@ -122,7 +123,7 @@ public class Connection  {
 			}
 
 		}
-		
+
 		public void sync() {
 
 			synchronized(sendQueue) {
@@ -166,6 +167,13 @@ public class Connection  {
 				}
 				try {
 					out.writeObject(next);
+				} catch (OptionalDataException ode) {
+					if(!ode.eof) {
+						p.log("Optional Data Exception with connection from: " + serverName);
+						ode.printStackTrace();
+					}
+					stop();
+					continue;
 				} catch (IOException e) {
 					p.log("Object write error to " + serverName);
 					stop();
@@ -240,6 +248,13 @@ public class Connection  {
 				} catch (EOFException eof) {
 					stop();
 					continue;
+				} catch (OptionalDataException ode) {
+					if(!ode.eof) {
+						p.log("Optional Data Exception with connection from: " + serverName);
+						ode.printStackTrace();
+					}
+					stop();
+					continue;
 				} catch (IOException e) {
 					p.log("IO Error with connection from: " + serverName);
 					e.printStackTrace();
@@ -249,7 +264,7 @@ public class Connection  {
 					p.log("Received unknown class from: " + serverName);
 					stop();
 					continue;
-				} 
+				}
 
 				if(!(obj instanceof EventLinkPacket)) {
 					p.log("Non-packet received (" + obj.getClass() + "): " + serverName);
