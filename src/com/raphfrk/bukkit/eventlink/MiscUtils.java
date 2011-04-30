@@ -12,7 +12,6 @@ import java.util.logging.Logger;
 
 import org.bukkit.Server;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 

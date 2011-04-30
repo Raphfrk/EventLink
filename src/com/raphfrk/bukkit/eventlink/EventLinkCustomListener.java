@@ -4,6 +4,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.CustomEventListener;
 import org.bukkit.event.Event;
 
+import com.raphfrk.bukkit.eventlinkapi.EventLinkSetupEvent;
+
 public class EventLinkCustomListener extends CustomEventListener {
 
 	final EventLink p;
@@ -15,6 +17,8 @@ public class EventLinkCustomListener extends CustomEventListener {
 	public void onCustomEvent(Event event) {
 		if(event instanceof EventLinkMessageEvent) {
 			onCustomEvent((EventLinkMessageEvent)event);
+		} else if(event instanceof EventLinkSetupEvent) {
+			onCustomEvent((EventLinkSetupEvent)event);
 		}
 	}
 	
@@ -35,6 +39,10 @@ public class EventLinkCustomListener extends CustomEventListener {
 			player.sendMessage(message);
 
 		}
+	}
+	
+	public void onCustomEvent(EventLinkSetupEvent eventLinkSetupEvent) {
+		eventLinkSetupEvent.setEventLinkAPI(p.eventLinkAPIInterface);
 	}
 
 }

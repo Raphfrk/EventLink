@@ -11,7 +11,6 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.Principal;
 
 import javax.net.ssl.KeyManager;

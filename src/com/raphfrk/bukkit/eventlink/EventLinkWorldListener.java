@@ -11,10 +11,9 @@ public class EventLinkWorldListener extends WorldListener {
 		this.p = p;
 	}
 	
+	@Override
 	public void onWorldLoad(WorldLoadEvent event) {
-        
-		p.routingTableManager.addEntry("servers", event.getWorld().getName());
-		
+		p.routingTableManager.addEntry("worlds", event.getWorld().getName());
     }
 	
 }
