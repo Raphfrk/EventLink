@@ -41,8 +41,4 @@ public class EventLinkCustomListener extends CustomEventListener {
 		}
 	}
 	
-	public void onCustomEvent(EventLinkSetupEvent eventLinkSetupEvent) {
-		eventLinkSetupEvent.setEventLinkAPI(p.eventLinkAPIInterface);
-	}
-
 }

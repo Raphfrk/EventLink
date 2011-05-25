@@ -9,10 +9,13 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Connection  {
 
 	private final EventLink p;
+
+	private final Connection thisConnection;
 
 	private final Socket s;
 
@@ -23,19 +26,13 @@ public class Connection  {
 	private final ObjectInputStream in;
 	private final ObjectOutputStream out;
 
-	private boolean end = false;
-	private final Object endSync = new Object();
-
 	private final InConnection inConnection;
 	private final OutConnection outConnection;
 
-	private final Thread inThread;
-	private final Thread outThread;
+	private final KillableThread inThread;
+	private final KillableThread outThread;
 
 	private final Object syncObject;
-
-	private boolean endIn = false;
-	private boolean endOut = false;
 
 	Connection(ConnectionManager connectionManager, Object syncObject, EventLink p, Socket s, ObjectInputStream in, ObjectOutputStream out, String serverName) {
 		this.connectionManager = connectionManager;
@@ -52,52 +49,76 @@ public class Connection  {
 
 		this.out = out;
 		this.in = in;
-		if(out==null||in==null) {
-			end = true;
+
+		if(in != null && out != null) {
+
+			outConnection = new OutConnection();
+			outThread = outConnection;
+			outThread.start();
+
+			inConnection = new InConnection();
+			inThread = inConnection;
+			inThread.start();
+
+			thisConnection = this;
+		} else {
+			outConnection = null;
+			outThread = null;
+
+			inConnection = null;
+			inThread = null;
+
+			thisConnection = null;
 		}
 
-		outConnection = new OutConnection();
-		outThread = new Thread(outConnection);
-		outThread.start();
+	}
 
-		inConnection = new InConnection();
-		inThread = new Thread(inConnection);
-		inThread.start();
+	public boolean joinConnection() throws InterruptedException {
+		if(inThread != null) {
+			inThread.join(100);
+		}
+		if(outThread != null) {
+			outThread.join(100);
+		}
+		return !whichAlive().equals("");
+	}
 
+	String whichAlive() {
+		String temp = "";
+		if(inThread != null && inThread.isAlive()) {
+			temp = "In ";
+		}
+		if(outThread != null && outThread.isAlive()) {
+			temp = temp + "out";
+		}
+		return temp;
+	}
+
+	void interruptConnection() {
+		if(inConnection != null) {
+			inConnection.interrupt();
+		}
+		if(outConnection != null) {
+			outConnection.interrupt();
+		}
+	}
+
+	boolean getAlive() {
+		return (inConnection != null && inConnection.isAlive()) || 
+		(outConnection != null && outConnection.isAlive());
 	}
 
 	String getServerName() {
 		return serverName;
 	}
 
-	void stop() {
-		synchronized(endSync) {
-			end = true;
-		}
-		outConnection.sync();
-	}
-
-	boolean getEnd() {
-		synchronized(endSync) {
-			return end;
-		}
-	}
-
-	boolean getAlive() {
-		synchronized(endSync) {
-			return (!endIn) || (!endOut); 
-		}
-	}
-
 	public void send(EventLinkPacket eventLinkPacket) {
 		outConnection.send(eventLinkPacket);
 	}
 
-	public void reset() {
-		outConnection.reset();
-	}
+	final AtomicBoolean closeLock = new AtomicBoolean(false);
 
-	private class OutConnection implements Runnable {
+	private class OutConnection extends KillableThread {
 
 		private LinkedList<EventLinkPacket> sendQueue = new LinkedList<EventLinkPacket>();
 
@@ -110,89 +131,73 @@ public class Connection  {
 
 		}
 
-		final Object resetSync = new Object();
-		boolean reset = false;
-
-
-		public void reset() {
-			synchronized(resetSync) {
-				reset = true;
-			}
-			synchronized(sendQueue) {
-				sendQueue.notify();
-			}
-
-		}
-
-		public void sync() {
-
-			synchronized(sendQueue) {
-				sendQueue.notify();
-			}
-
-		}
-
 		public void run() {
 
-			while(!getEnd()) {
+			while(!killed()) {
 
-				Object next = null;
+				EventLinkPacket next = null;
 
-				while(next == null && !getEnd()) {
+				while(next == null && !killed()) {
 					synchronized(sendQueue) {
-						if(sendQueue.isEmpty()) {
+						if(!killed() && sendQueue.isEmpty()) {
 							try {
-								sendQueue.wait();
+								sendQueue.wait(200);
 							} catch (InterruptedException e) {
+								kill();
+								continue;
 							}
 						} else {
 							next = sendQueue.removeFirst();
 						}
 					}
 				}
-				if(getEnd()) {
+				if(killed()) {
 					continue;
 				}
-				synchronized(resetSync) {
-					if(reset) {
-						reset = false;
-						try {
-							out.reset();
-						} catch (IOException e) {
-							p.log("Object reset error with " + serverName);
-							stop();
-							continue;
+				try {
+					synchronized(out) {
+						out.reset();
+						synchronized(next.payload) {
+							out.writeObject(next); 
 						}
 					}
-				}
-				try {
-					out.writeObject(next);
 				} catch (OptionalDataException ode) {
 					if(!ode.eof) {
 						p.log("Optional Data Exception with connection from: " + serverName);
 						ode.printStackTrace();
 					}
-					stop();
+					kill();
 					continue;
 				} catch (IOException e) {
 					p.log("Object write error to " + serverName);
-					stop();
+					kill();
 					continue;
 				}
 			}
 			synchronized(connectionManager.activeConnections) {
-				synchronized(endSync) {
-					endOut = true;
-					if(endIn) {
+				if(!inConnection.isAlive()) {
+					boolean removed = connectionManager.activeConnections.remove(serverName, thisConnection);
+
+					if(removed) {
 						p.log("Closing connection to " + serverName);
-						connectionManager.activeConnections.remove(serverName);
+						p.log("About to close routes");
 						p.routingTableManager.clearRoutesThrough(serverName);
+						p.log("Routes cleared");
+					} else {
+						p.log("Closing expired connection to " + serverName);
 					}
 				}
 			}
-			synchronized(endSync) {
-				endOut = true;
+
+
+			synchronized(closeLock) {
+				if(closeLock.get()) {
+					SSLUtils.closeSocket(s);
+				} else {
+					closeLock.set(true);
+				}
 			}
+
 			synchronized(syncObject) {
 				syncObject.notify();
 			}
@@ -208,7 +213,7 @@ public class Connection  {
 	}
 
 
-	private class InConnection implements Runnable {
+	private class InConnection extends KillableThread {
 
 		private LinkedList<EventLinkPacket> receiveQueue = new LinkedList<EventLinkPacket>();
 
@@ -232,10 +237,9 @@ public class Connection  {
 
 		}
 
-
 		public void run() {
 
-			while(!getEnd()) {
+			while(!killed()) {
 
 				Object obj = null;
 				try {
@@ -243,32 +247,32 @@ public class Connection  {
 				} catch (SocketTimeoutException ste) {
 					continue;
 				} catch (SocketException se) {
-					stop();
+					kill();
 					continue;
 				} catch (EOFException eof) {
-					stop();
+					kill();
 					continue;
 				} catch (OptionalDataException ode) {
 					if(!ode.eof) {
 						p.log("Optional Data Exception with connection from: " + serverName);
 						ode.printStackTrace();
 					}
-					stop();
+					kill();
 					continue;
 				} catch (IOException e) {
 					p.log("IO Error with connection from: " + serverName);
 					e.printStackTrace();
-					stop();
+					kill();
 					continue;
 				} catch (ClassNotFoundException e) {
 					p.log("Received unknown class from: " + serverName);
-					stop();
+					kill();
 					continue;
 				}
 
 				if(!(obj instanceof EventLinkPacket)) {
 					p.log("Non-packet received (" + obj.getClass() + "): " + serverName);
-					stop();
+					kill();
 					continue;
 				}
 
@@ -284,18 +288,28 @@ public class Connection  {
 
 				}
 			}
-			SSLUtils.closeSocket(s);
 
 			synchronized(connectionManager.activeConnections) {
-				synchronized(endSync) {
-					endIn = true;
-					if(endOut) {
-						p.log("Closing connection to " + serverName);
-						connectionManager.activeConnections.remove(serverName);
-						p.routingTableManager.clearRoutesThrough(serverName);
-					}
+				boolean removed = connectionManager.activeConnections.remove(serverName, thisConnection);
+
+				if(removed) {
+					p.log("Closing connection to " + serverName);
+					p.log("About to close routes");
+					p.routingTableManager.clearRoutesThrough(serverName);
+					p.log("Routes cleared");
+				} else {
+					p.log("Closing expired connection to " + serverName);
 				}
 			}
+
+			synchronized(closeLock) {
+				if(closeLock.get()) {
+					SSLUtils.closeSocket(s);
+				} else {
+					closeLock.set(true);
+				}
+			}
+
 			synchronized(syncObject) {
 				syncObject.notify();
 			}

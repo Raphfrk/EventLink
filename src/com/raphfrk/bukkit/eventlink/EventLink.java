@@ -6,19 +6,21 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.ServicePriority;
+import org.bukkit.plugin.ServicesManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.raphfrk.bukkit.eventlinkapi.EventLinkAPI;
 
 
 public class EventLink extends JavaPlugin {
@@ -57,6 +59,12 @@ public class EventLink extends JavaPlugin {
 	EventLinkPlayerListener playerListener = new EventLinkPlayerListener(this);
 	EventLinkWorldListener worldListener = new EventLinkWorldListener(this);
 
+	public void onLoad() {
+		ServicesManager sm = super.getServer().getServicesManager();
+		
+		sm.register(EventLinkAPI.class, eventLinkAPIInterface, this, ServicePriority.Normal);
+	}
+	
 	public void onEnable() {
 
 		String name = "EventLink";
@@ -116,7 +124,7 @@ public class EventLink extends JavaPlugin {
 				checkWorlds();
 			}
 		}, 20L);
-
+		
 	}
 	
 	public void checkWorlds() {

@@ -2,10 +2,10 @@ package com.raphfrk.bukkit.eventlink;
 
 import java.io.File;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RoutingTableManager {
 	
@@ -21,7 +21,7 @@ public class RoutingTableManager {
 	private Object endSync = new Object();
 	private boolean end = false;
 	
-	HashMap<String,RoutingTable> routingTables = new HashMap<String,RoutingTable>();
+	ConcurrentHashMap<String,RoutingTable> routingTables = new ConcurrentHashMap<String,RoutingTable>();
 	
 	RoutingTableManager(EventLink p, String password) {
 		
@@ -54,10 +54,12 @@ public class RoutingTableManager {
 
 	public synchronized Map<String,RoutingTableEntry> getEntries(String table) {
 		
-		if(!routingTables.containsKey(table)) {
+		RoutingTable routingTable = routingTables.get(table);
+		
+		if(routingTable == null) {
 			return null;
 		}
-		return routingTables.get(table).getEntries();
+		return routingTable.getEntries();
 		
 	}
 	
@@ -209,6 +211,7 @@ public class RoutingTableManager {
 	}
 	
 	public synchronized void clearRoutesThrough(String server) {
+
 		for(String key:routingTables.keySet()) {
 			
 			RoutingTable table = routingTables.get(key);
@@ -249,7 +252,6 @@ public class RoutingTableManager {
 	
 	private synchronized void sendTable(String target, RoutingTable table) {
 		
-		p.connectionManager.resetConnection(target);
 		p.connectionManager.sendObject(target, table);
 		
 	}

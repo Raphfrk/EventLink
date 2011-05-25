@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.event.Event;
 
@@ -19,18 +20,16 @@ public class ConnectionManager {
 
 	private final Object syncObject = new Object();
 
-	private Thread pollThread;
+	private KillableThread pollThread;
 	private final Object pollSync = new Object();
-	private boolean pollEnd = false;
 	private String password;
 
-	final HashMap<String,Connection> activeConnections = new HashMap<String,Connection>();
+	final ConcurrentHashMap<String,Connection> activeConnections = new ConcurrentHashMap<String,Connection>();
 
-	private boolean alive = true;
 	private boolean end = false;
 	private final Object endSync = new Object();
 
-	private final Thread t;
+	private final KillableThread t;
 
 	ConnectionManager(EventLink p, String serverName, String password) {
 
@@ -40,33 +39,14 @@ public class ConnectionManager {
 
 		this.p = p;
 
-		t = new Thread(new InObjects());
+		t = new InObjects();
 		t.start();
 
-		pollThread = new Thread(new ConnectionPolling());
+		pollThread = new ConnectionPolling();
 		pollThread.start();
 
 	}
 
-	// This is required in order to re-send the mutable object if it has changed
-	// Otherwise, the cached object will be sent
-	boolean resetConnection(String target) {
-		synchronized(activeConnections) {
-			if(getEnd()) {
-				p.log("Attempting to reset connection while connection manager is stopping");
-				return false;
-			}
-			if(activeConnections.containsKey(target)) {
-				Connection targetConnection = activeConnections.get(target);
-				targetConnection.reset();
-				return true;
-			} else {
-				return false;
-			}
-
-		}
-	}
-	
 	boolean sendObject(String[] targets, Object payload) {
 		EventLinkPacket eventLinkPacket = new EventLinkPacket(serverName, targets, payload);
 
@@ -130,7 +110,7 @@ public class ConnectionManager {
 			for(int cnt2=0;cnt2<length2;cnt2++) {
 				temp[cnt2] = targets.get(cnt2);
 			}
-			
+
 			EventLinkPacket newPacket = new EventLinkPacket(eventLinkPacket, temp);
 
 			synchronized(activeConnections) {
@@ -138,10 +118,10 @@ public class ConnectionManager {
 					p.log("Attempting to send object while connection manager is stopping");
 					return false;
 				}
-				Connection oneHop = activeConnections.get(temp[0]);
-				Connection multiHop = activeConnections.get(currentNextHop);
-				
-				if(activeConnections.containsKey(currentNextHop)) {
+				Connection oneHop = temp[0]==null?null:activeConnections.get(temp[0]);
+				Connection multiHop = currentNextHop==null?null:activeConnections.get(currentNextHop);
+
+				if(currentNextHop != null && activeConnections.containsKey(currentNextHop)) {
 					if( (newPacket.timeToLive--) >= 0) {
 						sent = true;
 						multiHop.send(newPacket);
@@ -173,7 +153,7 @@ public class ConnectionManager {
 					return "Connection to " + serverName + " is dead";
 				}
 
-				connection.stop();
+				connection.interruptConnection();
 
 				return "Sent stop signal to connection";
 			} else {
@@ -232,9 +212,8 @@ public class ConnectionManager {
 				p.routingTableManager.clearRoutesThrough(serverName);
 			}
 			if(activeConnections.containsKey(serverName) && activeConnections.get(serverName).getAlive()) {
-				p.log(serverName + " already has a connection, closing");
-				SSLUtils.closeSocket(s);
-				return false;
+				p.log(serverName + " already has a connection, closing old connection");
+				deleteConnection(serverName);
 			}
 			Connection connection = new Connection(this, syncObject, p, s, in, out, serverName);
 			activeConnections.put(serverName, connection);
@@ -316,17 +295,20 @@ public class ConnectionManager {
 
 		for(Connection current : connectionsToStop) {
 			p.log("Stopping connection to server: " + current.getServerName());
-			current.stop();
+			current.interruptConnection();
 		}
 
 		for(Connection current : connectionsToStop) {
 			p.log("Waiting for connection to: " + current.getServerName());
-			while(current.getAlive()) {
-				try {
-					Thread.sleep(250);
-				} catch (InterruptedException e) {}
+			try {
+				while(current.joinConnection()) {
+					p.log("Living threads: " + current.whichAlive());
+					current.interruptConnection();
+				}
+			} catch (InterruptedException e1) {
 			}
 		}
+		
 		synchronized(activeConnections) {
 			if(!activeConnections.isEmpty()) {
 				p.log("ERROR: all connections did not end");
@@ -336,69 +318,40 @@ public class ConnectionManager {
 
 		p.log("Waiting for connection manager timer to close");
 
-		boolean endTemp = false;
-		while(!endTemp) {
-			synchronized(pollSync) {
-				if(!pollEnd) {
-					pollSync.notify();
-				}
-				endTemp = pollEnd;
-			}
-			try {
-				Thread.sleep(250);
-			} catch (InterruptedException e) {}
-		}
-
-		p.log("Waiting for connection manager to close");
-
-		while(true) {
-			synchronized(endSync) {
-				endSync.notify();
-				if(!alive) {
-					p.log("Connection manager closed");
-					return;
-				}
-			}
-			synchronized(syncObject) {
-				syncObject.notify();
-			}
-			try {
-				Thread.sleep(250);
-			} catch (InterruptedException e) {
-			}
+		try {
+			pollThread.interrupt();
+			pollThread.join();
+		} catch (InterruptedException e) {
 		}
 
 	}
 
-	private class ConnectionPolling implements Runnable {
+	private class ConnectionPolling extends KillableThread {
 
 		public void run() {
 
-			while(!getEnd()) {
+			while(!this.killed()) {
 				checkTrusted(password);
 				synchronized(pollSync) {
 					try {
 						pollSync.wait(60000);
 					} catch (InterruptedException e) {
+						kill();
 					}
 				}
-			}
-
-			synchronized(pollSync) {
-				pollEnd = true;
 			}
 
 		}
 
 	}
 
-	private class InObjects implements Runnable {
+	private class InObjects extends KillableThread {
 
 		LinkedList<EventLinkPacket> eventLinkPackets = new LinkedList<EventLinkPacket>();
 
 		public void run() {
 
-			while(!getEnd()) {
+			while(!killed()) {
 
 				synchronized(activeConnections) {
 					for(String server : activeConnections.keySet()) {
@@ -443,24 +396,21 @@ public class ConnectionManager {
 					if(!active) {
 						try {
 							syncObject.wait(10000);
-						} catch (InterruptedException e) {}
+						} catch (InterruptedException e) {
+							kill();
+						}
 					}
 				}
 			}
-
-			synchronized(endSync) {
-				alive = false;
-			}
-
 		}
 	}
 
 	void processPacket(EventLinkPacket eventLinkPacket) {
-		
+
 		if(eventLinkPacket == null) {
 			return;
 		} 
-		
+
 		Object payload = eventLinkPacket.payload;
 
 		if(eventLinkPacket.destinationServers == null || eventLinkPacket.destinationServers.length == 0) {
