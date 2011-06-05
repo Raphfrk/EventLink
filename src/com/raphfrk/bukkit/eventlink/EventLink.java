@@ -105,6 +105,8 @@ public class EventLink extends JavaPlugin {
 
 		} else {
 			log("Unable to start server, server name not set");
+			pm.disablePlugin(this);
+			return;
 		}
 
 		pm.registerEvent(Type.CUSTOM_EVENT, customListener, Priority.Normal, this);
