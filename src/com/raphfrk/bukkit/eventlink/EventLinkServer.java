@@ -58,6 +58,8 @@ public class EventLinkServer {
 		t = new Thread(serverRunnable);
 
 		serverRunnable.setThread(t);
+		
+		t.setName("Event Link Server: port = " + portnum);
 
 		t.start();
 

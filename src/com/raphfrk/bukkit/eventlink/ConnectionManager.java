@@ -43,6 +43,7 @@ public class ConnectionManager {
 		t.start();
 
 		pollThread = new ConnectionPolling();
+		pollThread.setName("Poll Thread");
 		pollThread.start();
 
 	}
@@ -232,12 +233,14 @@ public class ConnectionManager {
 	}
 
 	boolean isConnected(String serverName) {
+		Connection connection;
 		synchronized(activeConnections) {
 			if(!activeConnections.containsKey(serverName)) {
 				return false;
 			}
-			return activeConnections.get(serverName).getAlive();
+			connection = activeConnections.get(serverName);
 		}
+		return connection.getAlive();
 	}
 
 	boolean getEnd() {

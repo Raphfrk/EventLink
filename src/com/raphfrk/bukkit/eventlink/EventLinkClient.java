@@ -78,6 +78,8 @@ public class EventLinkClient {
 
 		t = new Thread(clientRunnable);
 
+		t.setName("Event Link Client: " + hostname + ":" + portnum);
+		
 		t.start();
 
 	}

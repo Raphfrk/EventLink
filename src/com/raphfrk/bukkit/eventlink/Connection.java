@@ -54,10 +54,12 @@ public class Connection  {
 
 			outConnection = new OutConnection();
 			outThread = outConnection;
+			outThread.setName("Out connection: " + s.getInetAddress().getHostAddress() + ":" + s.getPort());
 			outThread.start();
 
 			inConnection = new InConnection();
 			inThread = inConnection;
+			inThread.setName("In connection: " + s.getInetAddress().getHostAddress() + ":" + s.getPort());
 			inThread.start();
 
 			thisConnection = this;
@@ -190,13 +192,11 @@ public class Connection  {
 			}
 
 
-			synchronized(closeLock) {
-				if(closeLock.get()) {
-					SSLUtils.closeSocket(s);
-				} else {
-					closeLock.set(true);
-				}
-			}
+			boolean canSkipClose = closeLock.compareAndSet(false, true);
+			
+			if(!canSkipClose) {
+				SSLUtils.closeSocket(s);
+			} 
 
 			synchronized(syncObject) {
 				syncObject.notify();
@@ -278,14 +278,13 @@ public class Connection  {
 
 				EventLinkPacket eventLinkPacket = (EventLinkPacket)obj;
 
-				synchronized(receiveQueue) {
-					if(eventLinkPacket!=null) {
-						receiveQueue.addLast(eventLinkPacket);
-						synchronized(syncObject) {
+				synchronized(syncObject) {
+					synchronized(receiveQueue) {
+						if(eventLinkPacket!=null) {
+							receiveQueue.addLast(eventLinkPacket);
 							syncObject.notify();
 						}
 					}
-
 				}
 			}
 
@@ -302,12 +301,10 @@ public class Connection  {
 				}
 			}
 
-			synchronized(closeLock) {
-				if(closeLock.get()) {
-					SSLUtils.closeSocket(s);
-				} else {
-					closeLock.set(true);
-				}
+			boolean canSkipClose = closeLock.compareAndSet(false, true);
+			
+			if(!canSkipClose) {
+				SSLUtils.closeSocket(s);
 			}
 
 			synchronized(syncObject) {

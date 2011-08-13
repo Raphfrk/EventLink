@@ -32,7 +32,7 @@ public class RoutingTableManager {
 		RoutingTableUpdater routingTableUpdater = new RoutingTableUpdater();
 		
 		t = new Thread(routingTableUpdater);
-		
+		t.setName("Routing table manager");
 		t.start();
 		
 	}

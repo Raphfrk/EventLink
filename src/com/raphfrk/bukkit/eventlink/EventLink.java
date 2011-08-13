@@ -35,6 +35,7 @@ public class EventLink extends JavaPlugin {
 	String certAlgorithm = "DSA";
 	int keySize;
 	HashSet<String> admins = new HashSet<String>();
+	boolean deadlockEnable;
 
 	File pluginDirectory;
 
@@ -47,6 +48,8 @@ public class EventLink extends JavaPlugin {
 	static final String slash = System.getProperty("file.separator");
 
 	Server server;
+	
+	KillableThread deadlock;
 
 	ConnectionManager connectionManager;
 	RoutingTableManager routingTableManager;
@@ -127,6 +130,12 @@ public class EventLink extends JavaPlugin {
 			}
 		}, 20L);
 		
+		if (deadlockEnable) {
+			deadlock = new DeadlockMonitor();
+			deadlock.setName("Deadlock poll thread");
+			deadlock.start();
+		}
+		
 	}
 	
 	public void checkWorlds() {
@@ -155,6 +164,10 @@ public class EventLink extends JavaPlugin {
 		if(routingTableManager!=null) {
 			routingTableManager.stop();
 			routingTableManager = null;
+		}
+		
+		if (deadlock != null) {
+			deadlock.kill();
 		}
 
 	}
@@ -226,6 +239,7 @@ public class EventLink extends JavaPlugin {
 		this.algorithm = pf.getString("algorithm" , "RSA");
 		this.certAlgorithm = pf.getString("cert_algorithm" , "SHA512WITHRSA");
 		this.keySize = pf.getInt("key_size" , 512);
+		this.deadlockEnable = pf.getBoolean("deadlock_monitor", false);
 
 		String adminString = pf.getString("admin_list", "");
 		for( String current : adminString.split(",")) {
