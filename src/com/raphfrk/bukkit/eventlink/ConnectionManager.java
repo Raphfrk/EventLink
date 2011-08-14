@@ -5,10 +5,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.bukkit.event.Event;
 
@@ -26,7 +27,7 @@ public class ConnectionManager {
 
 	final ConcurrentHashMap<String,Connection> activeConnections = new ConcurrentHashMap<String,Connection>();
 
-	private boolean end = false;
+	private AtomicBoolean end = new AtomicBoolean(false);
 	private final Object endSync = new Object();
 
 	private final KillableThread t;
@@ -114,6 +115,8 @@ public class ConnectionManager {
 
 			EventLinkPacket newPacket = new EventLinkPacket(eventLinkPacket, temp);
 
+			Connection targetConnection = null;
+			
 			synchronized(activeConnections) {
 				if(getEnd()) {
 					p.log("Attempting to send object while connection manager is stopping");
@@ -121,18 +124,21 @@ public class ConnectionManager {
 				}
 				Connection oneHop = temp[0]==null?null:activeConnections.get(temp[0]);
 				Connection multiHop = currentNextHop==null?null:activeConnections.get(currentNextHop);
-
+				
 				if(currentNextHop != null && activeConnections.containsKey(currentNextHop)) {
 					if( (newPacket.timeToLive--) >= 0) {
 						sent = true;
-						multiHop.send(newPacket);
+						targetConnection = multiHop;
 					}
 				} else if(oneHop != null) {
 					if( (newPacket.timeToLive--) >= 0) {
 						sent = true;
-						oneHop.send(newPacket);
+						targetConnection = oneHop;
 					}
 				}
+			}
+			if (targetConnection != null) {
+				targetConnection.send(newPacket);
 			}
 		}
 
@@ -202,6 +208,7 @@ public class ConnectionManager {
 
 	boolean addConnection(String serverName, Socket s, ObjectInputStream in, ObjectOutputStream out ) {
 
+		boolean clearRoutes = false;
 		synchronized(activeConnections) {
 			if(getEnd()) {
 				p.log("Attempting to start a connection while connection manager is stopping, closing");
@@ -210,7 +217,7 @@ public class ConnectionManager {
 			}
 			if(activeConnections.containsKey(serverName) && !activeConnections.get(serverName).getAlive()) {
 				activeConnections.remove(serverName);
-				p.routingTableManager.clearRoutesThrough(serverName);
+				clearRoutes = true;
 			}
 			if(activeConnections.containsKey(serverName) && activeConnections.get(serverName).getAlive()) {
 				p.log(serverName + " already has a connection, closing old connection");
@@ -218,6 +225,10 @@ public class ConnectionManager {
 			}
 			Connection connection = new Connection(this, syncObject, p, s, in, out, serverName);
 			activeConnections.put(serverName, connection);
+		}
+		
+		if (clearRoutes) {
+			p.routingTableManager.clearRoutesThrough(serverName);
 		}
 
 		synchronized(syncObject) {
@@ -244,9 +255,7 @@ public class ConnectionManager {
 	}
 
 	boolean getEnd() {
-		synchronized(endSync) {
-			return end;
-		}
+		return end.get();
 	}
 
 	void checkTrusted(String password) {
@@ -284,9 +293,7 @@ public class ConnectionManager {
 
 	void stop() {
 
-		synchronized(endSync) {
-			end = true;
-		}
+		end.set(true);
 
 		LinkedList<Connection> connectionsToStop = new LinkedList<Connection>();
 
@@ -356,18 +363,20 @@ public class ConnectionManager {
 
 			while(!killed()) {
 
+				Collection<Connection> connections;
 				synchronized(activeConnections) {
-					for(String server : activeConnections.keySet()) {
-						EventLinkPacket eventLinkPacket = null;
-						Connection connection = activeConnections.get(server);
-						do {
+					connections = activeConnections.values();
+				}
+				
+				for(Connection c : connections) {
+					EventLinkPacket eventLinkPacket = null;
 
-							eventLinkPacket = connection.receive();
-							if(eventLinkPacket!=null) {
-								eventLinkPackets.addLast(eventLinkPacket);
-							}
-						} while (eventLinkPacket != null );
-					}
+					do {
+						eventLinkPacket = c.receive();
+						if(eventLinkPacket!=null) {
+							eventLinkPackets.addLast(eventLinkPacket);
+						}
+					} while (eventLinkPacket != null );
 				}
 
 				EventLinkPacket eventLinkPacket = null;

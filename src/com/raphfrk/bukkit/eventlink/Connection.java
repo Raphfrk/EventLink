@@ -288,17 +288,23 @@ public class Connection  {
 				}
 			}
 
+			boolean clearRoutes = false;
+			
 			synchronized(connectionManager.activeConnections) {
 				boolean removed = connectionManager.activeConnections.remove(serverName, thisConnection);
 
 				if(removed) {
 					p.log("Closing connection to " + serverName);
 					p.log("About to close routes");
-					p.routingTableManager.clearRoutesThrough(serverName);
-					p.log("Routes cleared");
+					clearRoutes = true;
 				} else {
 					p.log("Closing expired connection to " + serverName);
 				}
+			}
+			
+			if (clearRoutes) {
+				p.routingTableManager.clearRoutesThrough(serverName);
+				p.log("Routes cleared");
 			}
 
 			boolean canSkipClose = closeLock.compareAndSet(false, true);
