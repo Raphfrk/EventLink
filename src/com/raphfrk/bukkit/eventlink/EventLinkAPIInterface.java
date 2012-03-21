@@ -82,5 +82,11 @@ public class EventLinkAPIInterface implements EventLinkAPI {
 	public boolean sendMessage(String fromPlayer, String toPlayer, String message) {
 		return EventLinkMessageEvent.sendMessage(fromPlayer, toPlayer, message, p);
 	}
+
+	@Override
+	public boolean getProviderName() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 	
 }

@@ -21,43 +21,44 @@
  ******************************************************************************/
 package com.raphfrk.bukkit.eventlink;
 
-import org.bukkit.event.Event;
+import java.io.Serializable;
 
-public class EventLinkMessageEvent extends Event {
-	
-	private static final long serialVersionUID = 1L;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
+
+public class EventLinkMessageEvent extends Event implements Serializable {
+	transient private static final HandlerList handlers = new HandlerList();
+	private static final long serialVersionUID = 2L;
 	private final String message;
 	private final String target;
 	private final String from;
-	
+
 	EventLinkMessageEvent(String target, String message) {
-		super("EventLinkMessage");
 		this.message = message;
 		this.target = target;
 		this.from = null;
 	}
-	
+
 	EventLinkMessageEvent(String from, String target, String message) {
-		super("EventLinkMessage");
 		this.message = message;
 		this.target = target;
 		this.from = from;
 	}
-	
+
 	String getMessage() {
 		return message;
 	}
-	
+
 	String getTarget() {
 		return target;
 	}
-	
+
 	String getFrom() {
 		return from;
 	}
-	
+
 	public static boolean sendMessage(String fromPlayer, String playerName, String message, EventLink p) {
-		
+
 		String playerLocation = p.eventLinkAPIInterface.getEntryLocation("players", playerName);
 		if(playerLocation != null) {
 			p.eventLinkAPIInterface.sendEvent(playerLocation, new EventLinkMessageEvent(fromPlayer, playerName, message));
@@ -65,11 +66,19 @@ public class EventLinkMessageEvent extends Event {
 		} else {
 			return false;
 		}
-		
+
 	}
-	
+
 	public static boolean sendMessage(String playerName, String message, EventLink p) {
 		return sendMessage(null, playerName, p);		
 	}
-	
+
+	@Override
+	public HandlerList getHandlers() {
+		return handlers;
+	}
+
+	public static HandlerList getHandlerList() {
+		return handlers;
+	}
 }

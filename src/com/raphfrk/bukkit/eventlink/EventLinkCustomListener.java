@@ -22,28 +22,20 @@
 package com.raphfrk.bukkit.eventlink;
 
 import org.bukkit.entity.Player;
-import org.bukkit.event.CustomEventListener;
-import org.bukkit.event.Event;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 
-import com.raphfrk.bukkit.eventlinkapi.EventLinkSetupEvent;
-
-public class EventLinkCustomListener extends CustomEventListener {
+public class EventLinkCustomListener implements Listener {
 
 	final EventLink p;
 
 	EventLinkCustomListener(EventLink p) {
 		this.p = p;
 	}
-
-	public void onCustomEvent(Event event) {
-		if(event instanceof EventLinkMessageEvent) {
-			onCustomEvent((EventLinkMessageEvent)event);
-		} else if(event instanceof EventLinkSetupEvent) {
-			onCustomEvent((EventLinkSetupEvent)event);
-		}
-	}
 	
-	public void onCustomEvent(EventLinkMessageEvent eventLinkMessage) {
+	@EventHandler(priority = EventPriority.NORMAL)
+	public void onEventLinkMessage(EventLinkMessageEvent eventLinkMessage) {
 
 		String playerName = eventLinkMessage.getTarget();
 

@@ -49,6 +49,7 @@ public class ConnectionManager {
 	final ConcurrentHashMap<String,Connection> activeConnections = new ConcurrentHashMap<String,Connection>();
 
 	private AtomicBoolean end = new AtomicBoolean(false);
+	@SuppressWarnings("unused")
 	private final Object endSync = new Object();
 
 	private final KillableThread t;
@@ -280,7 +281,7 @@ public class ConnectionManager {
 	}
 
 	void checkTrusted(String password) {
-		Enumeration<String> aliases = SSLUtils.getAliases(new File(p.pluginDirectory + p.slash + p.clientKeys), password);
+		Enumeration<String> aliases = SSLUtils.getAliases(new File(p.pluginDirectory + EventLink.slash + p.clientKeys), password);
 		while(aliases.hasMoreElements()) {
 			String current = aliases.nextElement();
 			String[] split = (current.split(";"));
