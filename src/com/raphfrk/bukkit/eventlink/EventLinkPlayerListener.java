@@ -21,11 +21,13 @@
  ******************************************************************************/
 package com.raphfrk.bukkit.eventlink;
 
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerListener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-public class EventLinkPlayerListener extends PlayerListener {
+public class EventLinkPlayerListener implements Listener {
 
 	final EventLink p;
 	
@@ -33,12 +35,12 @@ public class EventLinkPlayerListener extends PlayerListener {
 		this.p = p;
 	}
 		
-	@Override
+	@EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerJoin(PlayerJoinEvent event) {
     	p.routingTableManager.addEntry("players", event.getPlayer().getName());
     }
     
-	@Override
+	@EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerQuit(PlayerQuitEvent event) {
     	p.routingTableManager.deleteEntry("players", event.getPlayer().getName());
     }

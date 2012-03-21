@@ -22,23 +22,23 @@
 package com.raphfrk.bukkit.eventlink;
 
 import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 
 public class EventLinkMessageEvent extends Event {
 	
 	private static final long serialVersionUID = 1L;
+    private static final HandlerList handlers = new HandlerList();
 	private final String message;
 	private final String target;
 	private final String from;
 	
 	EventLinkMessageEvent(String target, String message) {
-		super("EventLinkMessage");
 		this.message = message;
 		this.target = target;
 		this.from = null;
 	}
 	
 	EventLinkMessageEvent(String from, String target, String message) {
-		super("EventLinkMessage");
 		this.message = message;
 		this.target = target;
 		this.from = from;
@@ -71,5 +71,13 @@ public class EventLinkMessageEvent extends Event {
 	public static boolean sendMessage(String playerName, String message, EventLink p) {
 		return sendMessage(null, playerName, p);		
 	}
+
+	@Override
+	public HandlerList getHandlers() {
+        return handlers;
+	}
 	
+    public static HandlerList getHandlerList() {
+        return handlers;
+    }
 }
