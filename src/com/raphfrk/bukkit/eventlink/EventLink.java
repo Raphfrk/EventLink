@@ -33,8 +33,6 @@ import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event.Priority;
-import org.bukkit.event.Event.Type;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
@@ -133,10 +131,10 @@ public class EventLink extends JavaPlugin {
 			return;
 		}
 
-		pm.registerEvent(Type.CUSTOM_EVENT, customListener, Priority.Normal, this);
-		pm.registerEvent(Type.PLAYER_JOIN, playerListener, Priority.Normal, this);
-		pm.registerEvent(Type.PLAYER_QUIT, playerListener, Priority.Normal, this);
-		pm.registerEvent(Type.WORLD_LOAD, worldListener, Priority.Normal, this);
+		pm.registerEvents(customListener, this);
+		pm.registerEvents(playerListener, this);
+		pm.registerEvents(worldListener, this);
+		
 		System.out.println("Registered events");
 
 		if(!this.serverName.trim().equals("")) {

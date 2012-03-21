@@ -21,10 +21,12 @@
  ******************************************************************************/
 package com.raphfrk.bukkit.eventlink;
 
-import org.bukkit.event.world.WorldListener;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldLoadEvent;
 
-public class EventLinkWorldListener extends WorldListener {
+public class EventLinkWorldListener implements Listener {
 
 	final EventLink p;
 	
@@ -32,7 +34,7 @@ public class EventLinkWorldListener extends WorldListener {
 		this.p = p;
 	}
 	
-	@Override
+	@EventHandler(priority = EventPriority.NORMAL)
 	public void onWorldLoad(WorldLoadEvent event) {
 		p.routingTableManager.addEntry("worlds", event.getWorld().getName());
     }

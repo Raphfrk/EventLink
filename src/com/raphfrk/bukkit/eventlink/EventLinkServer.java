@@ -128,6 +128,7 @@ public class EventLinkServer {
 
 			p.log("Stopping server on localhost " + portnum);
 			try {
+				@SuppressWarnings("unused")
 				Socket s = new Socket("localhost" , portnum);
 			} catch (UnknownHostException e) {
 				return;

@@ -121,6 +121,7 @@ public class EventLinkClient {
 
 			p.log("Connected to " + hostname + ":" + portnum);
 
+			@SuppressWarnings("unused")
 			Principal peer = null;
 
 			Object peerNameObject;			
