@@ -27,9 +27,8 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
 public class EventLinkMessageEvent extends Event implements Serializable {
-
+	transient private static final HandlerList handlers = new HandlerList();
 	private static final long serialVersionUID = 2L;
-	private static final HandlerList handlers = new HandlerList();
 	private final String message;
 	private final String target;
 	private final String from;
